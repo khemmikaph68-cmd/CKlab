@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>กำลังใช้งาน - CKLab</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="main.css" rel="stylesheet">
+    <style>
+        /* CSS เฉพาะหน้านี้ */
+        .timer-display { font-size: 5rem; font-weight: bold; font-family: monospace; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="bg-dark text-white">
+
+    <div class="container d-flex flex-column justify-content-center align-items-center vh-100 text-center">
+        
+        <div class="mb-4">
+            <span class="badge bg-danger blink px-3 py-2">● Live Session</span>
+        </div>
+
+        <h1 class="text-white-50">คุณกำลังใช้งานเครื่อง</h1>
+        <h2 id="pcNameDisplay" class="text-warning mb-5 display-4 fw-bold">...</h2>
+
+        <div class="card bg-secondary bg-opacity-25 border-0 rounded-4 p-5 mb-5 shadow-lg">
+            <div class="mb-2 text-white-50">เวลาที่ใช้งาน (Usage Time)</div>
+            <div id="timer" class="timer-display text-white">00:00:00</div>
+        </div>
+
+        <button onclick="checkout()" class="btn btn-danger btn-lg px-5 py-3 rounded-pill fw-bold shadow">
+            Check-out (เลิกใช้งาน)
+        </button>
+
+        <div class="mt-4 text-white-50 small">
+            ผู้ใช้งาน: <span id="userDisplay">-</span>
+        </div>
+
+    </div>
+
+    <script src="mock-db.js"></script>
+    <script src="timer.js"></script>
+</body>
+</html>

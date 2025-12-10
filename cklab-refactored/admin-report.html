@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Reports - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="main.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-md-2" id="sidebar-container"></div>
+            
+            <div class="col-md-10 p-4">
+                <h3 class="mb-4">📈 สถิติการใช้งาน</h3>
+
+                <div class="card shadow-sm p-4 mb-4">
+                    <h5>จำนวนผู้ใช้งาน (แยกตามเครื่อง)</h5>
+                    <div style="height: 300px;">
+                        <canvas id="usageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">📜 ประวัติการใช้งานล่าสุด</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0 small">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>เวลา (Timestamp)</th>
+                                    <th>Action</th>
+                                    <th>ผู้ใช้งาน</th>
+                                    <th>เครื่อง</th>
+                                    <th>อื่นๆ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="mock-db.js"></script>
+    <script src="admin-common.js"></script>
+    <script src="admin-report.js"></script>
+</body>
+</html>

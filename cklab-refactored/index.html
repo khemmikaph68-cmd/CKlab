@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>CKLab Check-in</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="main.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center align-items-center min-vh-100 py-4">
+        <div class="kiosk-card card w-100">
+            <div class="kiosk-header">
+                <h3>📍 CKLab Check-in</h3>
+                <small>ระบบเช็คอินห้องปฏิบัติการคอมพิวเตอร์</small>
+            </div>
+            
+            <div class="kiosk-body">
+                <div class="step-indicator mb-4">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+
+                <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded border" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active rounded-pill fw-bold" id="tab-internal" onclick="switchTab('internal')">
+                            🎓 ผู้ใช้ภายใน (นักศึกษา/บุคลากร)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link rounded-pill fw-bold" id="tab-external" onclick="switchTab('external')">
+                            🏢 บุคคลทั่วไป (Guest)
+                        </button>
+                    </li>
+                </ul>
+
+                <div id="formInternal">
+                    <h5 class="mb-3 text-center text-primary">ตรวจสอบสิทธิ์ด้วยรหัส</h5>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="intId" placeholder="รหัสนักศึกษา">
+                        <label>รหัสนักศึกษา / UBU WiFi</label>
+                    </div>
+                    <button onclick="loginInternal()" class="btn btn-primary w-100 py-3 fw-bold shadow-sm">
+                        ตรวจสอบสิทธิ์ (Next)
+                    </button>
+                </div>
+
+                <div id="formExternal" style="display: none;">
+                    <h5 class="mb-3 text-center text-success">ลงทะเบียนเข้าใช้งาน</h5>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">เลขบัตรประชาชน / Passport No.</label>
+                        <input type="text" id="extCard" class="form-control" placeholder="กรอกเลขบัตร">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">ชื่อ-นามสกุล</label>
+                        <input type="text" id="extName" class="form-control" placeholder="เช่น นายสมชาย รักดี">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">หน่วยงาน / สังกัด</label>
+                        <input type="text" id="extOrg" class="form-control" placeholder="เช่น บริษัท ABC จำกัด">
+                    </div>
+                    <button onclick="loginExternal()" class="btn btn-success w-100 py-3 fw-bold shadow-sm">
+                        ลงทะเบียนและถัดไป (Next)
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="mock-db.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ขอบคุณที่ใช้บริการ - CKLab</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="main.css" rel="stylesheet">
+    <style>
+        .star-rating { font-size: 3rem; color: #ddd; cursor: pointer; }
+        .star-rating span:hover,
+        .star-rating span.active { color: #ffc107; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center align-items-center min-vh-100 py-4">
+        <div class="kiosk-card card w-100 text-center">
+            <div class="kiosk-header">
+                <h3>🌟 ความพึงพอใจ</h3>
+                <small>กรุณาให้คะแนนก่อนออกจากระบบ</small>
+            </div>
+            
+            <div class="kiosk-body py-5">
+                <h5 class="text-muted mb-4">คุณพึงพอใจกับการใช้งานครั้งนี้เพียงใด?</h5>
+                
+                <div class="star-rating mb-3" id="starContainer">
+                    <span onclick="setRate(1)">★</span>
+                    <span onclick="setRate(2)">★</span>
+                    <span onclick="setRate(3)">★</span>
+                    <span onclick="setRate(4)">★</span>
+                    <span onclick="setRate(5)">★</span>
+                </div>
+                
+                <p class="mb-4">คะแนนของคุณ: <strong id="rateDisplay" class="fs-4 text-primary">0</strong> / 5</p>
+
+                <button onclick="submitFeedback()" class="btn btn-primary w-100 py-3 fw-bold shadow">
+                    ส่งแบบประเมินและจบการทำงาน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="mock-db.js"></script>
+    <script src="feedback.js"></script>
+</body>
+</html>

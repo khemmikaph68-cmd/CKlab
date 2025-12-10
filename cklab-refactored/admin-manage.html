@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="main.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-md-2" id="sidebar-container"></div>
+            
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>🖥️ จัดการเครื่องคอมพิวเตอร์</h3>
+                    <button onclick="openModal()" class="btn btn-success">+ เพิ่มเครื่องใหม่</button>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ชื่อเครื่อง</th>
+                                    <th>สถานะปัจจุบัน</th>
+                                    <th class="text-end">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pcTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="pcModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">ข้อมูลเครื่อง</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" id="editId">
+                    <div class="mb-3"><label>ชื่อเครื่อง</label><input type="text" id="editName" class="form-control"></div>
+                    <div class="mb-3"><label>สถานะ</label>
+                        <select id="editStatus" class="form-select">
+                            <option value="available">ว่าง (Available)</option>
+                            <option value="maintenance">ปิดปรับปรุง (Maintenance)</option>
+                            <option value="reserved">จองแล้ว (Reserved)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="savePC()" class="btn btn-primary">บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="mock-db.js"></script>
+    <script src="admin-common.js"></script>
+    <script src="admin-manage.js"></script>
+</body>
+</html>
