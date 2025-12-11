@@ -1,10 +1,32 @@
-/* mock-db.js (ฉบับสมบูรณ์: อัปเดตรายชื่อ AI ตามที่ระบุ) */
+/* mock-db.js (ฉบับสมบูรณ์ + ระบบจอง) */
 
 // ==========================================
 // 1. MOCK DATA (ข้อมูลจำลอง)
 // ==========================================
 
-// 1.2 ✅ ข้อมูล Software/AI Library (รายชื่อใหม่)
+// 1.0 ข้อมูลการจอง (Booking) - เพิ่มใหม่
+const DEFAULT_BOOKINGS = [
+    { 
+        id: 'b1', 
+        userId: '66123456', userName: 'สมชาย รักเรียน', 
+        pcId: '1', pcName: 'PC-01', 
+        date: new Date().toISOString().split('T')[0], // วันนี้
+        startTime: '09:00', endTime: '11:00', 
+        note: 'ทำโปรเจกต์จบ', 
+        status: 'pending' // pending, approved, rejected
+    },
+    { 
+        id: 'b2', 
+        userId: 'External', userName: 'คุณวิชัย (Guest)', 
+        pcId: '5', pcName: 'PC-05', 
+        date: new Date().toISOString().split('T')[0], // วันนี้
+        startTime: '13:00', endTime: '15:00', 
+        note: 'ทดสอบ AI', 
+        status: 'approved' 
+    }
+];
+
+// 1.2 ข้อมูล Software/AI Library
 const DEFAULT_SOFTWARE = [
     { id: "s1", name: "ChatGPT", version: "Plus", type: "AI" },
     { id: "s2", name: "Claude", version: "Pro", type: "AI" },
@@ -17,7 +39,7 @@ const DEFAULT_SOFTWARE = [
     { id: "s9", name: "Canva", version: "Pro", type: "Software" }
 ];
 
-// 1.1 ข้อมูลเครื่องคอมพิวเตอร์ (แก้ไข key เป็น installedSoftware ให้ตรงกับ JS)
+// 1.1 ข้อมูลเครื่องคอมพิวเตอร์
 const DEFAULT_PCS = [
     { 
         id: "1", name: "PC-01", status: "available", 
@@ -229,6 +251,10 @@ const DB = {
         }
     },
 
+    // Booking Management (เพิ่มใหม่)
+    getBookings: () => DB.getData('ck_bookings', DEFAULT_BOOKINGS),
+    saveBookings: (data) => DB.setData('ck_bookings', data),
+
     // Software Library
     getSoftwareLib: () => DB.getData('ck_software', DEFAULT_SOFTWARE),
     saveSoftwareLib: (data) => DB.setData('ck_software', data),
@@ -266,15 +292,3 @@ const DB = {
     },
     getLogs: () => DB.getData('ck_logs', DEFAULT_LOGS),
 };
-
-// ฟังก์ชันสร้าง Log จำลอง (จำเป็นต้องอยู่ภายนอก DB object)
-function generateMockLogs(numLogsPerMonth) {
-    let logs = [];
-    const daysInLastThreeMonths = 90;
-    
-    for(let i = 0; i < numLogsPerMonth * 3; i++) {
-        const randomDayOffset = Math.floor(Math.random() * daysInLastThreeMonths);
-        logs.push(generateMockLogEntry(randomDayOffset));
-    }
-    return logs;
-}

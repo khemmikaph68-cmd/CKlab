@@ -85,11 +85,10 @@ function renderMonitor() {
 
         // --- ส่วนการแสดง Badges Software/AI ---
         let softwareHtml = '';
-        // ตรวจสอบว่ามี installedSoftware และเป็น Array หรือไม่
         if (pc.installedSoftware && Array.isArray(pc.installedSoftware) && pc.installedSoftware.length > 0) {
             softwareHtml = '<div class="mt-2 pt-2 border-top d-flex flex-wrap justify-content-center gap-1">';
             
-            // แสดงแค่ 2 ตัวแรก ถ้าเกินให้ใส่ +... (เพื่อไม่ให้การ์ดรก)
+            // แสดงแค่ 2 ตัวแรก ถ้าเกินให้ใส่ +...
             const showCount = 2; 
             pc.installedSoftware.slice(0, showCount).forEach(sw => {
                 softwareHtml += `<span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">${sw}</span>`;
@@ -100,10 +99,8 @@ function renderMonitor() {
             }
             softwareHtml += '</div>';
         } else {
-            // ถ้าไม่มีให้เว้นว่างเพื่อความสวยงาม
              softwareHtml = '<div class="mt-2 pt-2 border-top" style="height: 29px;"></div>';
         }
-        // ------------------------------------------------
 
         // สร้าง HTML Card
         grid.innerHTML += `
@@ -134,10 +131,8 @@ function handlePcClick(pcId) {
     if (!pc) return;
 
     if (pc.status === 'available') {
-        // ถ้าว่าง -> เปิด Modal เช็คอิน
         openCheckInModal(pc);
     } else if (pc.status === 'in_use') {
-        // ถ้าไม่ว่าง -> ถามเพื่อ Force Logout
         if(confirm(`⚠️ เครื่อง ${pc.name} กำลังใช้งานโดย ${pc.currentUser}\nต้องการบังคับออกจากระบบ (Force Logout) หรือไม่?`)) {
             performForceCheckout(pc.id);
         }
@@ -148,11 +143,9 @@ function handlePcClick(pcId) {
 
 // --- 3. MODAL LOGIC (เปิดหน้าต่าง Check-in) ---
 function openCheckInModal(pc) {
-    // Set PC Info
     document.getElementById('checkInPcId').value = pc.id;
     document.getElementById('modalPcName').innerText = `Station: ${pc.name}`;
     
-    // Set Software Badges ใน Modal (แสดงทั้งหมด)
     const swContainer = document.getElementById('modalSoftwareTags');
     swContainer.innerHTML = '';
     
@@ -164,27 +157,20 @@ function openCheckInModal(pc) {
         swContainer.innerHTML = '<span class="text-muted small">- ไม่มีข้อมูล Software -</span>';
     }
 
-    // Reset Form State
-    switchTab('internal'); // กลับไปแท็บแรกเสมอ
-    
-    // Clear Inputs
+    // Reset Form
+    switchTab('internal');
     document.getElementById('ubuUser').value = '';
     document.getElementById('extIdCard').value = '';
     document.getElementById('extName').value = '';
     document.getElementById('extOrg').value = '';
-    
-    // Hide Verify Card
     document.getElementById('internalVerifyCard').classList.add('d-none');
     
-    // Reset Button
     const btnConfirm = document.getElementById('btnConfirm');
     btnConfirm.disabled = true;
     btnConfirm.className = 'btn btn-secondary w-100 py-3 fw-bold shadow-sm';
     btnConfirm.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>ยืนยัน Check-in';
     
-    verifiedUserData = null; // ล้างค่า user เก่า
-
-    // Show Modal
+    verifiedUserData = null;
     if(checkInModal) checkInModal.show();
 }
 
@@ -198,7 +184,6 @@ function switchTab(tabName) {
     const btnConfirm = document.getElementById('btnConfirm');
 
     if (tabName === 'internal') {
-        // UI Updates
         btnInternal.classList.add('active', 'bg-primary', 'text-white');
         btnInternal.classList.remove('border');
         btnExternal.classList.remove('active', 'bg-primary', 'text-white');
@@ -207,7 +192,6 @@ function switchTab(tabName) {
         formInternal.classList.remove('d-none');
         formExternal.classList.add('d-none');
         
-        // Button Logic: ต้อง Verify ก่อนถึงจะกดได้
         btnConfirm.disabled = !verifiedUserData;
         if(verifiedUserData) {
             btnConfirm.className = 'btn btn-success w-100 py-3 fw-bold shadow-sm';
@@ -216,7 +200,6 @@ function switchTab(tabName) {
         }
 
     } else {
-        // UI Updates
         btnExternal.classList.add('active', 'bg-primary', 'text-white');
         btnExternal.classList.remove('border');
         btnInternal.classList.remove('active', 'bg-primary', 'text-white');
@@ -225,7 +208,6 @@ function switchTab(tabName) {
         formExternal.classList.remove('d-none');
         formInternal.classList.add('d-none');
         
-        // Button Logic: กดได้เลย
         btnConfirm.disabled = false;
         btnConfirm.className = 'btn btn-success w-100 py-3 fw-bold shadow-sm';
     }
@@ -235,14 +217,12 @@ function switchTab(tabName) {
 function verifyUBUUser() {
     const userIdInput = document.getElementById('ubuUser');
     const userId = userIdInput.value.trim();
-    
     if (!userId) { 
         alert('กรุณากรอกรหัสนักศึกษา / บุคลากร'); 
         userIdInput.focus();
         return; 
     }
 
-    // เรียกใช้ Mock DB
     const user = DB.checkRegAPI(userId);
 
     if (user) {
@@ -252,13 +232,10 @@ function verifyUBUUser() {
             faculty: user.faculty,
             role: user.role
         };
-
-        // แสดง Card
         document.getElementById('internalVerifyCard').classList.remove('d-none');
         document.getElementById('showName').innerText = verifiedUserData.name;
         document.getElementById('showFaculty').innerText = verifiedUserData.faculty;
         
-        // เปิดปุ่ม
         const btnConfirm = document.getElementById('btnConfirm');
         btnConfirm.disabled = false;
         btnConfirm.className = 'btn btn-success w-100 py-3 fw-bold shadow-sm';
@@ -266,8 +243,6 @@ function verifyUBUUser() {
         alert('❌ ไม่พบข้อมูลในระบบ (ลองใช้รหัส: 66123456)');
         verifiedUserData = null;
         document.getElementById('internalVerifyCard').classList.add('d-none');
-        
-        // Disable ปุ่มกลับคืน
         const btnConfirm = document.getElementById('btnConfirm');
         btnConfirm.disabled = true;
         btnConfirm.className = 'btn btn-secondary w-100 py-3 fw-bold shadow-sm';
@@ -301,10 +276,8 @@ function confirmCheckIn() {
         finalId = extId || 'N/A';
     }
 
-    // บันทึกลง DB
     DB.updatePCStatus(pcId, 'in_use', finalName);
     
-    // บันทึก Log
     DB.saveLog({
         action: 'Admin Check-in',
         userId: finalId,
@@ -314,27 +287,29 @@ function confirmCheckIn() {
         details: 'Manual check-in by Admin'
     });
     
-    // ปิด Modal และ Refresh
     if(checkInModal) checkInModal.hide();
     renderMonitor();
-    
-    // Alert เล็กน้อย
-    // alert(`✅ Check-in สำเร็จ: ${finalName}`);
 }
 
-// --- 7. FORCE CHECK-OUT ---
+// --- 7. FORCE CHECK-OUT (บันทึกคะแนน 5) ---
 function performForceCheckout(pcId) {
-    // คืนสถานะว่าง
+    // 1. ดึงข้อมูลเครื่องก่อน เพื่อเอาชื่อคนใช้มาบันทึกใน Log
+    const pcs = DB.getPCs();
+    const pc = pcs.find(p => String(p.id) === String(pcId));
+    const currentUser = pc ? pc.currentUser : 'Unknown';
+
+    // 2. คืนสถานะว่าง
     DB.updatePCStatus(pcId, 'available');
     
-    // Log
+    // 3. บันทึก Log พร้อมให้คะแนน 5 เต็ม ✅
     DB.saveLog({
         action: 'Force Check-out',
         pcId: pcId,
-        user: 'System Admin',
-        details: 'Forced logout via Monitor'
+        user: currentUser, // ใส่ชื่อคนใช้เดิม
+        userRole: 'System Admin', // ระบุว่าใครเป็นคนทำรายการ
+        details: 'Forced logout via Monitor (Auto Rating 5/5)',
+        satisfactionScore: 5 // ✅ เพิ่มตรงนี้
     });
 
     renderMonitor();
-    // alert('✅ บังคับออกจากระบบเรียบร้อย');
 }

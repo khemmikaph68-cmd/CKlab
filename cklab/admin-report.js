@@ -659,3 +659,130 @@ function renderLifetimeStats() {
     document.getElementById('progInternal').style.width = `${intPercent}%`;
     document.getElementById('progExternal').style.width = `${extPercent}%`;
 }
+
+// --- ฟังก์ชัน IMPORT CSV ---
+function processImportCSV(inputElement) {
+    const file = inputElement.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const text = e.target.result;
+        parseAndSaveCSV(text);
+    };
+    
+    // อ่านไฟล์เป็น Text
+    reader.readAsText(file);
+    
+    // Reset input เพื่อให้เลือกไฟล์เดิมซ้ำได้ถ้าต้องการ
+    inputElement.value = ''; 
+}
+
+function parseAndSaveCSV(csvText) {
+    // 1. แยกบรรทัด (รองรับทั้ง Windows \r\n และ Unix \n)
+    const lines = csvText.split(/\r\n|\n/);
+    
+    // ตรวจสอบว่ามีข้อมูลไหม
+    if (lines.length < 2) {
+        alert("ไฟล์ CSV ว่างเปล่าหรือรูปแบบไม่ถูกต้อง");
+        return;
+    }
+
+    let successCount = 0;
+    
+    // 2. วนลูปทีละบรรทัด (เริ่มที่ i=1 เพื่อข้าม Header บรรทัดแรก)
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // 3. แยก Column (ระวังเรื่องเครื่องหมายจุลภาคใน "Software")
+        // Logic: ถ้าเจอ "..." ให้ถือว่าเป็นก้อนเดียวกัน
+        const columns = parseCSVLine(line);
+
+        // ตรวจสอบความครบถ้วนของข้อมูล (อย่างน้อยต้องมี วันที่, ชื่อ, PC ID)
+        if (columns.length < 9) continue; 
+
+        // 4. แมพข้อมูลกลับเป็น Object (ต้องตรงกับลำดับในไฟล์ Export)
+        // ลำดับ: ลำดับ, วันที่, เวลาเข้า, เวลาออก, ชื่อ, ID, คณะ, ประเภท, PC ID, Software, ...
+        
+        const dateStr = columns[1];     // วันที่ (DD/MM/YYYY)
+        const timeOutStr = columns[3];  // เวลาออก (HH:mm:ss)
+        const timestamp = convertToISO(dateStr, timeOutStr); // แปลงกลับเป็น ISO String
+
+        // แปลงรายการ Software จาก String กลับเป็น Array
+        // ตัวอย่าง: "ChatGPT; Claude" -> ["ChatGPT", "Claude"]
+        let softwareArr = [];
+        let cleanSoftwareStr = columns[9].replace(/^"|"$/g, ''); // ลบ "" ที่หัวท้ายออก
+        if (cleanSoftwareStr && cleanSoftwareStr !== '-') {
+            softwareArr = cleanSoftwareStr.split(';').map(s => s.trim());
+        }
+
+        const newLog = {
+            action: 'Imported Log',
+            timestamp: timestamp, // ใช้เวลาออกเป็น timestamp หลัก
+            startTime: convertToISO(dateStr, columns[2]), // เวลาเข้า
+            
+            userName: columns[4],
+            userId: columns[5],
+            userFaculty: columns[6],
+            userRole: columns[7] === 'External' ? 'Guest' : 'student', // แปลงกลับคร่าวๆ
+            
+            pcId: columns[8],
+            usedSoftware: softwareArr,
+            
+            durationMinutes: parseInt(columns[11]) || 0,
+            satisfactionScore: parseInt(columns[12]) || null
+        };
+
+        // 5. บันทึกลง DB
+        DB.saveLog(newLog);
+        successCount++;
+    }
+
+    // 6. แจ้งเตือนและรีเฟรช
+    alert(`✅ นำเข้าข้อมูลสำเร็จ ${successCount} รายการ`);
+    
+    // โหลดหน้าใหม่เพื่อแสดงข้อมูลล่าสุด
+    location.reload(); 
+}
+
+// Helper: แกะบรรทัด CSV โดยไม่สน comma ที่อยู่ในเครื่องหมายคำพูด ""
+function parseCSVLine(text) {
+    const result = [];
+    let start = 0;
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '"') {
+            inQuotes = !inQuotes; // สลับสถานะเมื่อเจอ "
+        } else if (text[i] === ',' && !inQuotes) {
+            // ถ้าเจอ , และไม่ได้อยู่ใน " ให้ตัดคำ
+            result.push(text.substring(start, i));
+            start = i + 1;
+        }
+    }
+    // เก็บคำสุดท้าย
+    result.push(text.substring(start));
+    return result;
+}
+
+// Helper: แปลงวันที่จาก CSV (31/12/2025) กลับเป็น ISO Date object
+function convertToISO(dateStr, timeStr) {
+    if (!dateStr || dateStr === '-') return new Date().toISOString();
+    
+    try {
+        const [day, month, year] = dateStr.split('/'); // 31, 12, 2568
+        let jsYear = parseInt(year);
+        // เช็คว่าเป็น พ.ศ. หรือ ค.ศ. (ถ้า > 2400 น่าจะเป็น พ.ศ.)
+        if (jsYear > 2400) jsYear -= 543;
+
+        // ถ้าไม่มีเวลา ให้ใช้เวลาปัจจุบัน
+        const timePart = (timeStr && timeStr !== '-') ? timeStr : "00:00:00";
+        
+        // สร้าง Date Object: "2025-12-31T12:00:00"
+        return new Date(`${jsYear}-${month}-${day}T${timePart}`).toISOString();
+    } catch (e) {
+        return new Date().toISOString();
+    }
+}
