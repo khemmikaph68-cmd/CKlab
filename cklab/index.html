@@ -20,12 +20,17 @@
                 </div>
             </div>
 
-            <div class="kiosk-header">
-                <img src="img/ubulogo.png" 
-                     alt="Logo" class="university-logo">
-                <h4 class="mb-1 fw-bold" style="color: var(--primary);">ลงชื่อเข้าใช้งาน</h4>
-                <p class="text-muted small mb-0">CKLab</p>
-            </div>
+<div class="kiosk-header">
+    <img src="img/ubulogo.png" alt="Logo" class="university-logo">
+    
+    <h4 class="mb-1 fw-bold" style="color: var(--primary);" id="displayLabName">
+        ลงชื่อเข้าใช้งาน
+    </h4>
+    
+    <p class="text-muted small mb-0" id="displayLocation">
+        CKLab Computer Center
+    </p>
+</div>
             
             <div class="kiosk-body pt-2">
 
@@ -133,5 +138,26 @@
 
     <script src="mock-db.js"></script>
     <script src="auth.js"></script>
+
+<script src="mock-db.js"></script> <script src="auth.js"></script>     <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. ดึงข้อมูล Config ล่าสุดจาก Database
+        const config = DB.getGeneralConfig();
+
+        // 2. ถ้ามีข้อมูล ให้เอามาใส่ในหน้าเว็บ
+        if (config) {
+            // เปลี่ยนชื่อ Lab (ถ้าไม่มีให้ใช้ค่าเดิม)
+            if(config.labName) {
+                document.getElementById('displayLabName').innerText = config.labName;
+                document.title = config.labName; // เปลี่ยนชื่อ Tab Browser ด้วย
+            }
+            
+            // เปลี่ยนสถานที่ (Location)
+            if(config.labLocation) {
+                document.getElementById('displayLocation').innerText = config.labLocation;
+            }
+        }
+    });
+</script>
 </body>
 </html>

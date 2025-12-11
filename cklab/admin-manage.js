@@ -1,18 +1,19 @@
-/* admin-manage.js (Final Fix: Ensure rendering and error handling) */
+/* admin-manage.js */
 
 let pcModal; // ตัวแปรเก็บ Modal
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. ตรวจสอบ DB และ Session
     if (typeof DB === 'undefined') {
-        console.error("Critical: mock-db.js not loaded. Cannot manage PC data.");
-        alert("Error: ไม่พบไฟล์ mock-db.js กรุณาตรวจสอบการเชื่อมต่อ");
+        console.error("Critical: mock-db.js not loaded.");
+        alert("Error: ไม่พบไฟล์ mock-db.js");
         return;
     }
 
     const session = DB.getSession();
     if (!session || !session.user || session.user.role !== 'admin') {
-        // window.location.href = 'admin-login.html'; // เปิดใช้งานเมื่อต้องการบังคับ Login
+        window.location.href = 'admin-login.html';
+        return;
     }
 
     // 2. เตรียม Modal
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pcModal = new bootstrap.Modal(modalEl);
     }
 
-    // 3. ✅ วาดตารางข้อมูลทันที (เรียกฟังก์ชันหลัก)
+    // 3. วาดตารางข้อมูล
     renderPCTable();
 });
 
@@ -30,32 +31,29 @@ function renderPCTable() {
     const tbody = document.getElementById('pcTableBody');
     if (!tbody) return;
 
-    // ดึงข้อมูล (ถ้า DB.getPCs() มีปัญหาหรือไม่คืนค่า Array ให้ใช้ Array ว่าง)
     const pcs = Array.isArray(DB.getPCs()) ? DB.getPCs() : [];
     
     tbody.innerHTML = '';
 
     if (pcs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">ไม่พบข้อมูลเครื่องคอมพิวเตอร์ (กดปุ่ม "เพิ่มเครื่องใหม่")</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">ไม่พบข้อมูล (กดปุ่ม "เพิ่มเครื่องใหม่")</td></tr>`;
         return;
     }
 
     pcs.forEach(pc => {
-        // Fallback for missing data
         const id = pc.id || '?';
         const name = pc.name || 'Unknown';
         const status = pc.status || 'maintenance';
         
-        // จัดการสี Badge สถานะ
         let badgeClass = 'bg-secondary';
         if (status === 'available') badgeClass = 'bg-success';
         if (status === 'in_use') badgeClass = 'bg-danger';
         if (status === 'reserved') badgeClass = 'bg-warning text-dark';
         
-        // จัดการรายชื่อ Software
+        // ✅ แก้ไข: ใช้ installedSoftware ให้ตรงกับ Monitor
         let softBadges = '<span class="text-muted small">-</span>';
-        if (Array.isArray(pc.software) && pc.software.length > 0) {
-            softBadges = pc.software.map(s => {
+        if (Array.isArray(pc.installedSoftware) && pc.installedSoftware.length > 0) {
+            softBadges = pc.installedSoftware.map(s => {
                 let sName = s || "";
                 let isAI = sName.toLowerCase().includes('gpt') || sName.toLowerCase().includes('ai') || sName.toLowerCase().includes('gemini');
                 let color = isAI ? 'bg-primary bg-opacity-10 text-primary border border-primary' : 'bg-light text-dark border';
@@ -63,7 +61,6 @@ function renderPCTable() {
             }).join('');
         }
 
-        // เพิ่มแถวในตาราง
         tbody.innerHTML += `
             <tr>
                 <td class="ps-4 fw-bold text-muted">#${id}</td>
@@ -81,23 +78,20 @@ function renderPCTable() {
 
 // --- 2. OPEN MODAL (เปิดหน้าต่างเพิ่ม/แก้ไข) ---
 function openPCModal(id = null) {
-    if (!pcModal) {
-        alert("Error: Modal ไม่พร้อมใช้งาน (เช็ค Console F12)");
-        return;
-    }
+    if (!pcModal) return;
 
     const modalTitle = document.getElementById('pcModalTitle');
     
-    // เคลียร์ค่าเดิมในฟอร์ม
+    // เคลียร์ค่าเดิม
     document.getElementById('editPcId').value = '';
     document.getElementById('editPcName').value = '';
     document.getElementById('editPcStatus').value = 'available';
 
-    // โหลดรายชื่อ Software มาสร้าง Checkbox รอไว้
+    // สร้าง Checkbox รอไว้ (ส่ง ID ไปเพื่อติ๊กถูกอันที่มีอยู่แล้ว)
     renderSoftwareCheckboxes(id);
 
     if (id) {
-        // กรณีแก้ไข
+        // แก้ไข
         modalTitle.innerText = `แก้ไข PC-${id.toString().padStart(2,'0')}`;
         const pcs = Array.isArray(DB.getPCs()) ? DB.getPCs() : [];
         const pc = pcs.find(p => p.id == id);
@@ -107,10 +101,9 @@ function openPCModal(id = null) {
             document.getElementById('editPcStatus').value = pc.status;
         }
     } else {
-        // กรณีเพิ่มใหม่
+        // เพิ่มใหม่
         modalTitle.innerText = 'เพิ่มเครื่องใหม่';
         const pcs = Array.isArray(DB.getPCs()) ? DB.getPCs() : [];
-        // Gen เลขเครื่องถัดไปอัตโนมัติ
         let maxId = 0;
         pcs.forEach(p => { let num = parseInt(p.id); if (!isNaN(num) && num > maxId) maxId = num; });
         document.getElementById('editPcName').value = `PC-${(maxId + 1).toString().padStart(2,'0')}`;
@@ -124,20 +117,20 @@ function renderSoftwareCheckboxes(pcId) {
     const listContainer = document.getElementById('softwareCheckboxList');
     if (!listContainer) return;
 
-    // เช็คว่ามีฟังก์ชัน DB.getSoftwareLib และคืนค่าเป็น Array
-    const lib = (DB.getSoftwareLib && typeof DB.getSoftwareLib === 'function' && Array.isArray(DB.getSoftwareLib())) ? DB.getSoftwareLib() : []; 
+    const lib = (DB.getSoftwareLib && typeof DB.getSoftwareLib === 'function') ? DB.getSoftwareLib() : []; 
     
     let installed = [];
     if (pcId) {
         const pcs = Array.isArray(DB.getPCs()) ? DB.getPCs() : [];
         const pc = pcs.find(p => p.id == pcId);
-        if (pc && Array.isArray(pc.software)) installed = pc.software;
+        // ✅ แก้ไข: ดึงค่าจาก installedSoftware
+        if (pc && Array.isArray(pc.installedSoftware)) installed = pc.installedSoftware;
     }
 
     listContainer.innerHTML = '';
     
     if (lib.length === 0) {
-        listContainer.innerHTML = '<div class="col-12 text-muted small text-center p-3">ไม่พบรายการ Software ในคลัง <br> (ไปเพิ่มที่เมนู Manage AI)</div>';
+        listContainer.innerHTML = '<div class="col-12 text-muted small text-center p-3">ไม่พบรายการ Software</div>';
         return;
     }
 
@@ -152,7 +145,7 @@ function renderSoftwareCheckboxes(pcId) {
         listContainer.innerHTML += `
             <div class="col-md-6">
                 <div class="form-check bg-white p-2 rounded border h-100">
-                    <input class="form-check-input ms-1" type="checkbox" value="${fullName}" id="sw_${item.id}" ${isChecked}>
+                    <input class="form-check-input ms-1" type="checkbox" name="pcSoftware" value="${fullName}" id="sw_${item.id}" ${isChecked}>
                     <label class="form-check-label ms-2 small fw-bold w-100 cursor-pointer" for="sw_${item.id}">
                         ${icon} ${item.name} <span class="text-muted fw-normal">v.${item.version}</span>
                     </label>
@@ -168,12 +161,10 @@ function savePC() {
     const name = document.getElementById('editPcName').value.trim();
     const status = document.getElementById('editPcStatus').value;
 
-    if (!name) {
-        alert("กรุณาระบุชื่อเครื่อง");
-        return;
-    }
+    if (!name) { alert("กรุณาระบุชื่อเครื่อง"); return; }
 
-    const checkboxes = document.querySelectorAll('#softwareCheckboxList input:checked');
+    // ดึงค่า Checkbox ที่ถูกเลือก
+    const checkboxes = document.querySelectorAll('input[name="pcSoftware"]:checked');
     const selectedSoftware = Array.from(checkboxes).map(cb => cb.value);
 
     let pcs = Array.isArray(DB.getPCs()) ? DB.getPCs() : [];
@@ -184,16 +175,15 @@ function savePC() {
         if (index !== -1) {
             pcs[index].name = name;
             pcs[index].status = status;
-            pcs[index].software = selectedSoftware;
+            // ✅ แก้ไข: บันทึกลง installedSoftware
+            pcs[index].installedSoftware = selectedSoftware;
             
             if(status === 'available') { 
                 pcs[index].currentUser = null; 
                 pcs[index].startTime = null; 
-            } else if (status === 'in_use') {
-                 if (!pcs[index].currentUser) {
-                    pcs[index].currentUser = "Admin Set (Manual)";
-                    pcs[index].startTime = Date.now();
-                }
+            } else if (status === 'in_use' && !pcs[index].currentUser) {
+                 pcs[index].currentUser = "Admin Set";
+                 pcs[index].startTime = Date.now();
             }
         }
     } else {
@@ -206,7 +196,8 @@ function savePC() {
             id: newId, 
             name, 
             status, 
-            software: selectedSoftware, 
+            // ✅ แก้ไข: บันทึกลง installedSoftware
+            installedSoftware: selectedSoftware, 
             currentUser: (status === 'in_use') ? "Admin Set" : null, 
             startTime: (status === 'in_use') ? Date.now() : null
         });
