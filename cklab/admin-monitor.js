@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // 2. Init Modal (อ้างอิง ID checkInModal ตาม HTML ใหม่)
+    // 2. Init Modal
     const modalEl = document.getElementById('checkInModal');
     if (modalEl) {
         checkInModal = new bootstrap.Modal(modalEl);
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderMonitor();
     updateClock();
     
-    // Auto Refresh ทุก 3 วินาที (เฉพาะตอน Modal ปิดอยู่)
+    // Auto Refresh ทุก 3 วินาที (เพื่อให้เวลาเดิน)
     setInterval(() => {
         if (modalEl && !modalEl.classList.contains('show')) {
             renderMonitor();
@@ -44,6 +44,9 @@ function renderMonitor() {
     if(!grid) return;
 
     const pcs = DB.getPCs();
+    const bookings = (DB.getBookings && typeof DB.getBookings === 'function') ? DB.getBookings() : []; // ดึงข้อมูลการจอง
+    const todayStr = new Date().toISOString().split('T')[0]; // วันที่ปัจจุบัน YYYY-MM-DD
+
     grid.innerHTML = '';
 
     pcs.forEach(pc => {
@@ -83,17 +86,55 @@ function renderMonitor() {
             `<div class="mt-2 small text-dark fw-bold text-truncate"><i class="bi bi-person-fill"></i> ${pc.currentUser}</div>` : 
             `<div class="mt-2 small text-muted">-</div>`;
 
-        // --- ส่วนการแสดง Badges Software/AI ---
+        // --- ส่วนที่ 1: แสดงรอบเวลา (Booking Slot) ---
+        // หาการจองที่ตรงกับเครื่องนี้, วันนี้, และสถานะ approved
+        // (ถ้ามีคนใช้งานอยู่ พยายามหาอันที่ชื่อตรงกันก่อน ถ้าไม่มีเอาอันแรกที่เจอ)
+        let activeBooking = bookings.find(b => 
+            b.pcId == pc.id && 
+            b.date === todayStr && 
+            b.status === 'approved' &&
+            (pc.currentUser ? b.userName === pc.currentUser : true)
+        );
+
+        let timeSlotInfo = '';
+        if (activeBooking) {
+            timeSlotInfo = `<div class="d-flex align-items-center justify-content-center text-primary mt-1" style="font-size: 0.75rem;">
+                <i class="bi bi-calendar-check me-1"></i> จอง: ${activeBooking.startTime} - ${activeBooking.endTime}
+            </div>`;
+        } else if (pc.status === 'in_use') {
+             timeSlotInfo = `<div class="text-muted mt-1" style="font-size: 0.75rem;">(Walk-in)</div>`;
+        } else {
+             timeSlotInfo = `<div class="text-muted mt-1" style="font-size: 0.75rem; visibility: hidden;">-</div>`; // เว้นที่ไว้
+        }
+
+        // --- ส่วนที่ 2: แสดงเวลาที่ใช้ไป (Usage Duration) ---
+        let usageTimeBadge = '';
+        if (pc.status === 'in_use' && pc.startTime) {
+            const diffMs = Date.now() - pc.startTime;
+            const diffMins = Math.floor(diffMs / 60000);
+            const hrs = Math.floor(diffMins / 60);
+            const mins = diffMins % 60;
+            const timeTxt = hrs > 0 ? `${hrs}ชม. ${mins}น.` : `${mins} นาที`;
+            
+            // เปลี่ยนสีถ้าใช้นานเกิน 3 ชม.
+            const badgeColor = hrs >= 3 ? 'bg-danger' : 'bg-warning text-dark';
+            
+            usageTimeBadge = `<div class="badge ${badgeColor} mt-1 border" title="เริ่มเมื่อ ${new Date(pc.startTime).toLocaleTimeString('th-TH')}">
+                <i class="bi bi-stopwatch-fill"></i> ใช้ไป ${timeTxt}
+            </div>`;
+        } else {
+            // ใส่ช่องว่างไว้ไม่ให้การ์ดกระตุกเวลาสถานะเปลี่ยน
+            usageTimeBadge = `<div class="mt-1" style="height: 21px;"></div>`; 
+        }
+
+        // --- ส่วนที่ 3: Software Badges ---
         let softwareHtml = '';
         if (pc.installedSoftware && Array.isArray(pc.installedSoftware) && pc.installedSoftware.length > 0) {
             softwareHtml = '<div class="mt-2 pt-2 border-top d-flex flex-wrap justify-content-center gap-1">';
-            
-            // แสดงแค่ 2 ตัวแรก ถ้าเกินให้ใส่ +...
             const showCount = 2; 
             pc.installedSoftware.slice(0, showCount).forEach(sw => {
                 softwareHtml += `<span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">${sw}</span>`;
             });
-            
             if (pc.installedSoftware.length > showCount) {
                 softwareHtml += `<span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">+${pc.installedSoftware.length - showCount}</span>`;
             }
@@ -113,10 +154,14 @@ function renderMonitor() {
                         </div>
 
                         <i class="bi ${iconClass} display-6 ${statusClass} mb-2"></i>
-                        <h5 class="fw-bold mb-1 text-dark">${pc.name}</h5>
+                        <h5 class="fw-bold mb-0 text-dark">${pc.name}</h5>
                         <div class="badge bg-light text-dark border mb-1">${label}</div>
                         
                         ${userDisplay}
+                        
+                        ${timeSlotInfo}
+                        ${usageTimeBadge}
+
                         ${softwareHtml} 
                     </div>
                 </div>
@@ -157,7 +202,6 @@ function openCheckInModal(pc) {
         swContainer.innerHTML = '<span class="text-muted small">- ไม่มีข้อมูล Software -</span>';
     }
 
-    // Reset Form
     switchTab('internal');
     document.getElementById('ubuUser').value = '';
     document.getElementById('extIdCard').value = '';
@@ -276,6 +320,7 @@ function confirmCheckIn() {
         finalId = extId || 'N/A';
     }
 
+    // อัปเดตสถานะเป็น in_use
     DB.updatePCStatus(pcId, 'in_use', finalName);
     
     DB.saveLog({
@@ -293,22 +338,19 @@ function confirmCheckIn() {
 
 // --- 7. FORCE CHECK-OUT (บันทึกคะแนน 5) ---
 function performForceCheckout(pcId) {
-    // 1. ดึงข้อมูลเครื่องก่อน เพื่อเอาชื่อคนใช้มาบันทึกใน Log
     const pcs = DB.getPCs();
     const pc = pcs.find(p => String(p.id) === String(pcId));
     const currentUser = pc ? pc.currentUser : 'Unknown';
 
-    // 2. คืนสถานะว่าง
     DB.updatePCStatus(pcId, 'available');
     
-    // 3. บันทึก Log พร้อมให้คะแนน 5 เต็ม ✅
     DB.saveLog({
         action: 'Force Check-out',
         pcId: pcId,
-        user: currentUser, // ใส่ชื่อคนใช้เดิม
-        userRole: 'System Admin', // ระบุว่าใครเป็นคนทำรายการ
+        user: currentUser,
+        userRole: 'System Admin',
         details: 'Forced logout via Monitor (Auto Rating 5/5)',
-        satisfactionScore: 5 // ✅ เพิ่มตรงนี้
+        satisfactionScore: 5 
     });
 
     renderMonitor();
