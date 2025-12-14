@@ -95,7 +95,10 @@ function initializeReports(logs) {
 
     const statsLogs = logs.filter(l => l.action === 'END_SESSION'); 
     const data = processLogs(statsLogs); // Process even if empty to show empty charts
-    
+
+    // ✅ เรียกฟังก์ชันแสดงคอมเมนต์ (เพิ่มบรรทัดนี้)
+    renderFeedbackComments(statsLogs);
+
     monthlyFacultyChartInstance = drawBeautifulLineChart(data.monthlyFacultyData, 'monthlyFacultyChart', 5);
     monthlyOrgChartInstance = drawBeautifulLineChart(data.monthlyOrgData, 'monthlyOrgChart', 5);
     topSoftwareChartInstance = drawTopSoftwareChart(data.softwareStats);
@@ -103,6 +106,62 @@ function initializeReports(logs) {
     pcAvgChartInstance = drawPCAvgTimeChart(data.pcAvgTimeData);
     satisfactionChartInstance = drawSatisfactionChart(data.satisfactionData);
 }
+
+function renderFeedbackComments(logs) {
+    const container = document.getElementById('feedbackCommentList');
+    const countBadge = document.getElementById('commentCount');
+    if (!container) return;
+
+    // 1. กรองเฉพาะคนที่มีคอมเมนต์
+    const comments = logs.filter(log => log.comment && log.comment.trim() !== "");
+
+    // อัปเดตตัวเลขจำนวนคอมเมนต์
+    if(countBadge) countBadge.innerText = comments.length;
+
+    if (comments.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted mt-5">
+                <i class="bi bi-chat-square-dots fs-1 opacity-25"></i>
+                <p class="small mt-2">ยังไม่มีข้อเสนอแนะเพิ่มเติม</p>
+            </div>`;
+        return;
+    }
+
+    // 2. เรียงลำดับ (ใหม่สุดขึ้นก่อน)
+    const sortedComments = comments.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // 3. สร้าง HTML
+    container.innerHTML = sortedComments.map(log => {
+        const score = parseInt(log.satisfactionScore) || 0;
+        
+        // สร้างดาวตามคะแนน
+        let stars = '';
+        for(let i=1; i<=5; i++) {
+            stars += i <= score ? '<i class="bi bi-star-fill text-warning small"></i>' : '<i class="bi bi-star text-muted opacity-25 small"></i>';
+        }
+
+        const dateStr = new Date(log.timestamp).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+        const pcName = `PC-${log.pcId || '?'}`;
+        const user = log.userName || 'Unknown';
+
+        // สีขอบด้านซ้ายตามคะแนน (เขียว/เหลือง/แดง)
+        const borderClass = score >= 4 ? 'border-success' : (score >= 2 ? 'border-warning' : 'border-danger');
+
+        return `
+            <div class="list-group-item bg-white border-start border-4 ${borderClass} mb-2 rounded shadow-sm py-2 px-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="small fw-bold text-dark">${user} <span class="text-muted fw-normal">(${pcName})</span></div>
+                    <div class="text-nowrap">${stars}</div>
+                </div>
+                <p class="mb-1 small text-secondary">"${log.comment}"</p>
+                <div class="text-end">
+                    <small class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-clock me-1"></i>${dateStr}</small>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 
 function processLogs(logs) {
     const result = {
@@ -461,3 +520,4 @@ function createCSVFile(logs, fileName) {
     link.click();
     document.body.removeChild(link);
 }
+
