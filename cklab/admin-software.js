@@ -1,17 +1,20 @@
-/* admin-software.js (Standard Version + Search) */
+/* admin-software.js (Updated for Pastel UI) */
 
 let softwareModal;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. เช็คสิทธิ์ Admin
     const session = DB.getSession();
     if (!session || !session.user || session.user.role !== 'admin') {
         window.location.href = 'admin-login.html';
         return;
     }
 
+    // 2. Init Modal
     const modalEl = document.getElementById('softwareModal');
     if(modalEl) softwareModal = new bootstrap.Modal(modalEl);
 
+    // 3. Render Table
     renderTable();
 });
 
@@ -19,7 +22,7 @@ function renderTable() {
     const tbody = document.getElementById('softwareTableBody');
     let lib = DB.getSoftwareLib(); 
 
-    // --- ส่วนที่ 1: อัปเดตตัวเลขในการ์ด (นับจากทั้งหมด) ---
+    // --- ส่วนที่ 1: อัปเดตตัวเลขการ์ดสถิติ ---
     const total = lib.length;
     const aiCount = lib.filter(i => i.type === 'AI').length;
     const swCount = lib.filter(i => i.type === 'Software').length;
@@ -28,12 +31,10 @@ function renderTable() {
     if(document.getElementById('countAI')) document.getElementById('countAI').innerText = aiCount;
     if(document.getElementById('countSW')) document.getElementById('countSW').innerText = swCount;
 
-    // --- ส่วนที่ 2: ระบบค้นหา (Search Logic) ---
-    // รับค่าจากช่องค้นหา
+    // --- ส่วนที่ 2: ระบบค้นหา ---
     const searchInput = document.getElementById('softwareSearch');
     const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
     
-    // ถ้ามีคำค้นหา ให้กรองข้อมูล
     if (searchVal) {
         lib = lib.filter(item => 
             item.name.toLowerCase().includes(searchVal) || 
@@ -41,30 +42,44 @@ function renderTable() {
         );
     }
 
-    // --- ส่วนที่ 3: แสดงผลตาราง ---
+    // --- ส่วนที่ 3: วาดตาราง ---
     tbody.innerHTML = '';
 
     if (lib.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-5 text-muted">ไม่พบข้อมูล</td></tr>`;
         return;
     }
 
     lib.forEach(item => {
+        // Badge สวยๆ ตามดีไซน์
         let typeBadge = item.type === 'AI' 
-            ? '<span class="badge bg-primary"><i class="bi bi-robot me-1"></i>AI Tool</span>' 
-            : '<span class="badge bg-secondary"><i class="bi bi-hdd me-1"></i>Software</span>';
+            ? '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-robot me-1"></i>AI Tool</span>' 
+            : '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-hdd me-1"></i>Software</span>';
+
+        // เช็ควันหมดอายุ
+        let expireHtml = '';
+        if (item.expire) {
+            const today = new Date().toISOString().split('T')[0];
+            const isExpired = item.expire < today;
+            const colorClass = isExpired ? 'text-danger fw-bold' : 'text-muted';
+            const icon = isExpired ? 'bi-exclamation-circle-fill' : 'bi-clock-history';
+            expireHtml = `<div class="${colorClass} mt-1" style="font-size: 0.75rem;"><i class="bi ${icon} me-1"></i>Exp: ${item.expire}</div>`;
+        }
 
         tbody.innerHTML += `
             <tr>
-                <td class="ps-4 fw-bold">${item.name}</td>
-                <td>${item.version}</td>
+                <td class="ps-4">
+                    <div class="fw-bold text-dark">${item.name}</div>
+                    ${expireHtml}
+                </td>
+                <td><span class="text-secondary">${item.version}</span></td>
                 <td>${typeBadge}</td>
                 <td class="text-end pe-4">
-                    <button onclick="openModal('${item.id}')" class="btn btn-sm btn-outline-primary me-1">
-                        <i class="bi bi-pencil-fill"></i> แก้ไข
+                    <button onclick="openModal('${item.id}')" class="btn btn-sm btn-light border text-primary me-1" title="แก้ไข">
+                        <i class="bi bi-pencil-fill"></i>
                     </button>
-                    <button onclick="deleteItem('${item.id}')" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-trash-fill"></i> ลบ
+                    <button onclick="deleteItem('${item.id}')" class="btn btn-sm btn-light border text-danger" title="ลบ">
+                        <i class="bi bi-trash-fill"></i>
                     </button>
                 </td>
             </tr>
@@ -74,58 +89,78 @@ function renderTable() {
 
 function openModal(id = null) {
     const modalTitle = document.getElementById('modalTitle');
+    
+    // Reset Form
     document.getElementById('editId').value = '';
     document.getElementById('editName').value = '';
     document.getElementById('editVersion').value = '';
-    document.getElementById('editType').value = 'AI';
+    document.getElementById('editExpire').value = '';
+    
+    // Reset Type Selection (Default = Software)
+    document.getElementById('editType').value = 'Software';
+    updateTypeCardUI('Software');
 
     if (id) {
-        modalTitle.innerText = 'แก้ไขข้อมูล';
+        modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูล';
         const lib = DB.getSoftwareLib();
         const item = lib.find(i => i.id == id);
         if (item) {
             document.getElementById('editId').value = item.id;
             document.getElementById('editName').value = item.name;
             document.getElementById('editVersion').value = item.version;
+            document.getElementById('editExpire').value = item.expire || '';
+            
+            // Set Type และอัปเดตการ์ดให้ Active
             document.getElementById('editType').value = item.type;
+            updateTypeCardUI(item.type);
         }
     } else {
-        modalTitle.innerText = 'เพิ่มรายการใหม่';
+        modalTitle.innerHTML = '<i class="bi bi-plus-lg me-2"></i>เพิ่มรายการใหม่';
     }
 
     if(softwareModal) softwareModal.show();
+}
+
+// ฟังก์ชันช่วยเลือกการ์ด (ทำงานคู่กับ HTML ใหม่)
+function updateTypeCardUI(type) {
+    const cards = document.querySelectorAll('.software-type-card');
+    cards.forEach(card => card.classList.remove('active'));
+    
+    // Logic เลือกการ์ด: เช็คจาก onclick text หรือลำดับ (Software=ใบแรก, AI=ใบสอง)
+    // ใน HTML ของคุณ: Software อยู่ div แรก, AI อยู่ div สอง
+    if (type === 'Software') {
+        if(cards[0]) cards[0].classList.add('active');
+    } else {
+        if(cards[1]) cards[1].classList.add('active');
+    }
 }
 
 function saveSoftware() {
     const id = document.getElementById('editId').value;
     const name = document.getElementById('editName').value.trim();
     const version = document.getElementById('editVersion').value.trim();
-    const type = document.getElementById('editType').value;
+    const type = document.getElementById('editType').value; // รับค่าจาก Hidden Input
+    const expire = document.getElementById('editExpire').value;
 
-    if (!name || !version) return alert("กรุณากรอกข้อมูลให้ครบ");
+    if (!name || !version) return alert("กรุณากรอกชื่อและเวอร์ชันให้ครบถ้วน");
 
     let lib = DB.getSoftwareLib();
+    const data = { name, version, type, expire };
 
     if (id) {
         // Edit
         const idx = lib.findIndex(i => i.id == id);
         if (idx !== -1) {
-            lib[idx].name = name;
-            lib[idx].version = version;
-            lib[idx].type = type;
+            lib[idx] = { ...lib[idx], ...data };
         }
     } else {
         // Add
         const newId = 'sw_' + Date.now();
-        lib.push({ id: newId, name, version, type });
+        lib.push({ id: newId, ...data });
     }
 
     DB.saveSoftwareLib(lib);
     if(softwareModal) softwareModal.hide();
-    
-    // ล้างช่องค้นหาเพื่อให้เห็นข้อมูลใหม่ที่เพิ่มเข้าไป (Optional)
-    // document.getElementById('softwareSearch').value = '';
-    
     renderTable();
 }
 
