@@ -361,3 +361,88 @@ body {
 .border-top-danger { border-top-color: #dc3545 !important; }
 .border-top-warning { border-top-color: #ffc107 !important; }
 .border-top-secondary { border-top-color: #6c757d !important; }
+
+
+/* =========================================
+   MONITOR DASHBOARD STYLES (ADDED NEW)
+   ========================================= */
+
+/* 1. Stat Cards (การ์ดแสดงสถานะ) */
+.stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-left-width: 5px !important; /* ขอบซ้ายหนา 5px */
+    cursor: pointer;
+    background: #fff;
+    min-height: 100px; /* ความสูงขั้นต่ำ */
+}
+.stat-card:hover {
+    transform: translateY(-4px); /* ลอยขึ้นเล็กน้อย */
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+}
+.stat-card:active {
+    transform: scale(0.98); /* กดแล้วยุบลงนิดนึง */
+}
+
+/* 2. Monitor Icon Box (กล่องไอคอนในการ์ด) */
+.monitor-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 3. Stat Card Border Colors (สีขอบซ้าย) */
+.border-success-start { border-left-color: #198754 !important; }
+.border-danger-start { border-left-color: #dc3545 !important; }
+.border-warning-start { border-left-color: #ffc107 !important; }
+.border-secondary-start { border-left-color: #6c757d !important; }
+
+/* 4. Filter Buttons Group (กลุ่มปุ่มกรอง) */
+.filter-btn-group .btn {
+    border-radius: 50px;
+    padding: 0.375rem 1rem;
+    font-size: 0.9rem;
+    margin-left: 5px;
+    font-weight: 500;
+}
+.filter-btn-group .btn.active {
+    font-weight: 600;
+    box-shadow: inset 0 3px 5px rgba(0,0,0,0.125);
+}
+
+/* 5. Search Box Pill Style (ช่องค้นหาทรงแคปซูล) */
+.search-pill .input-group-text {
+    background-color: #fff;
+    border-radius: 50px 0 0 50px;
+    border-right: none;
+    padding-left: 20px;
+}
+.search-pill .form-control {
+    background-color: #fff;
+    border-radius: 0 50px 50px 0;
+    border-left: none;
+    padding-left: 0;
+}
+.search-pill .form-control:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+}
+
+/* 6. PC Card Hover Effect (เอฟเฟกต์การ์ด PC) */
+.pc-card-hover {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    border-top: 4px solid transparent; /* เตรียมพื้นที่สำหรับ border สีด้านบน */
+}
+.pc-card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+/* 7. Border Top Colors for PC Cards (สีขอบบนการ์ด PC) */
+.border-top-success { border-top-color: #198754 !important; }
+.border-top-danger { border-top-color: #dc3545 !important; }
+.border-top-warning { border-top-color: #ffc107 !important; }
+.border-top-secondary { border-top-color: #6c757d !important; }

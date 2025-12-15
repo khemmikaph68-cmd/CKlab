@@ -397,3 +397,41 @@ function confirmCheckIn() {
     if(checkInModal) checkInModal.hide();
     renderMonitor();
 }
+
+// ✅ ฟังก์ชันจัดการหน้าตาปุ่ม Filter
+function updateFilterButtons(activeStatus) {
+    const buttons = {
+        'all': document.getElementById('btn-all'),
+        'available': document.getElementById('btn-available'),
+        'in_use': document.getElementById('btn-in_use'),
+        'reserved': document.getElementById('btn-reserved')
+    };
+
+    // Reset ทุกปุ่มเป็น Outline
+    Object.values(buttons).forEach(btn => {
+        if(!btn) return;
+        btn.className = "btn btn-sm rounded-pill px-3 me-1";
+        // Reset Style ตามสีเดิม
+        if(btn.id.includes('all')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#495057'; btn.style.border = '1px solid #ced4da'; }
+        if(btn.id.includes('available')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#198754'; btn.style.border = '1px solid #198754'; }
+        if(btn.id.includes('in_use')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#dc3545'; btn.style.border = '1px solid #dc3545'; }
+        if(btn.id.includes('reserved')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#ffc107'; btn.style.border = '1px solid #ffc107'; }
+    });
+
+    // Set Active Button (Solid Color)
+    const activeBtn = buttons[activeStatus];
+    if(activeBtn) {
+        activeBtn.style.color = 'white';
+        if(activeStatus === 'all') { activeBtn.style.backgroundColor = '#495057'; activeBtn.style.borderColor = '#495057'; }
+        if(activeStatus === 'available') { activeBtn.style.backgroundColor = '#198754'; activeBtn.style.borderColor = '#198754'; }
+        if(activeStatus === 'in_use') { activeBtn.style.backgroundColor = '#dc3545'; activeBtn.style.borderColor = '#dc3545'; }
+        if(activeStatus === 'reserved') { activeBtn.style.backgroundColor = '#ffc107'; activeBtn.style.borderColor = '#ffc107'; activeBtn.style.color = '#000'; } // สีดำสำหรับพื้นเหลือง
+    }
+}
+
+// ✅ อัปเดตฟังก์ชัน filterPC เดิม ให้เรียกใช้ฟังก์ชันข้างบน
+function filterPC(status) {
+    currentFilter = status;
+    updateFilterButtons(status); // <-- เพิ่มบรรทัดนี้
+    renderMonitor();
+}
