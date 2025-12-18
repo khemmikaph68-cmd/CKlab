@@ -1,4 +1,4 @@
-/* admin-booking.js (Smart Auto-Select PC & AI) */
+/* admin-booking.js (Fixed: Sync Status with Monitor Logic) */
 
 let bookingModal;
 
@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Set Default Date
     const dateFilter = document.getElementById('bookingDateFilter');
     if (dateFilter) dateFilter.valueAsDate = new Date();
-
 
     // 3. Render Table
     renderBookings();
@@ -41,7 +40,8 @@ function renderBookings() {
     }
 
     filtered.sort((a, b) => {
-        const priority = { 'reserved': 1, 'in_use': 2, 'completed': 3, 'no_show': 4, 'rejected': 5 };
+        // ✅ แก้ไข: เปลี่ยน reserved -> approved ในลำดับความสำคัญ
+        const priority = { 'approved': 1, 'pending': 2, 'completed': 3, 'no_show': 4, 'rejected': 5 };
         const statusDiff = (priority[a.status] || 99) - (priority[b.status] || 99);
         if (statusDiff !== 0) return statusDiff;
         return a.startTime.localeCompare(b.startTime);
@@ -53,21 +53,23 @@ function renderBookings() {
         switch(b.status) {
             case 'pending':
                 badgeClass = 'bg-warning text-dark'; statusText = 'รออนุมัติ';
-                actionBtns = `<button class="btn btn-sm btn-danger" onclick="updateStatus('${b.id}', 'rejected')"><i class="bi bi-x-lg"></i></button>`;
+                // ปุ่มอนุมัติ (เปลี่ยนเป็น approved)
+                actionBtns = `
+                    <button class="btn btn-sm btn-success me-1" onclick="updateStatus('${b.id}', 'approved')"><i class="bi bi-check-lg"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="updateStatus('${b.id}', 'rejected')"><i class="bi bi-x-lg"></i></button>`;
                 break;
-            case 'reserved':
-                badgeClass = 'bg-warning text-dark'; statusText = 'จอง (Reserved)';
+            
+            // ✅ แก้ไข: Case นี้ต้องเป็น 'approved' (สถานะจองสำเร็จ)
+            case 'approved':
+                badgeClass = 'bg-primary text-white'; statusText = 'อนุมัติแล้ว (Approved)';
                 actionBtns = `
                     <button class="btn btn-sm btn-outline-secondary me-1" onclick="updateStatus('${b.id}', 'no_show')" title="แจ้ง No Show"><i class="bi bi-person-x"></i></button>
                     <button class="btn btn-sm btn-outline-danger" onclick="updateStatus('${b.id}', 'rejected')" title="ยกเลิก"><i class="bi bi-trash"></i></button>
                 `;
                 break;
-            case 'in_use':
-                badgeClass = 'bg-danger'; statusText = 'กำลังใช้งาน';
-                actionBtns = `<button class="btn btn-sm btn-outline-success" onclick="updateStatus('${b.id}', 'completed')" title="จบการทำงาน"><i class="bi bi-check-lg"></i></button>`;
-                break;
+            
             case 'completed':
-                badgeClass = 'bg-success'; statusText = 'เสร็จสิ้น'; break;
+                badgeClass = 'bg-success'; statusText = 'ใช้งานเสร็จสิ้น'; break;
             case 'no_show':
                 badgeClass = 'bg-secondary'; statusText = 'No Show'; break;
             case 'rejected':
@@ -101,6 +103,8 @@ function updateStatus(id, newStatus) {
         const booking = bookings[index];
         booking.status = newStatus;
         DB.saveBookings(bookings);
+        
+        // ถ้าเป็นการยกเลิก หรือ No Show ให้คืนสถานะเครื่อง PC เป็นว่างด้วย (ถ้าเครื่องยังสถานะ reserved อยู่)
         if (newStatus === 'no_show' || newStatus === 'rejected') {
             const pcs = DB.getPCs();
             const pc = pcs.find(p => String(p.id) === String(booking.pcId));
@@ -108,15 +112,6 @@ function updateStatus(id, newStatus) {
                 DB.updatePCStatus(booking.pcId, 'available', null);
             }
         }
-        renderBookings();
-    }
-}
-
-function deleteBooking(id) {
-    if(confirm('ต้องการลบรายการนี้ถาวรหรือไม่?')) {
-        let bookings = DB.getBookings();
-        bookings = bookings.filter(b => b.id !== id);
-        DB.saveBookings(bookings);
         renderBookings();
     }
 }
@@ -153,7 +148,6 @@ function initSoftwareFilter() {
     });
 }
 
-// ✅ ฟังก์ชันนี้คือพระเอก: กรองเครื่อง + ล็อคเครื่อง + ติ๊กถูก
 function filterPCList() {
     const filterVal = document.getElementById('bkSoftwareFilter').value;
     const allPcs = DB.getPCs();
@@ -166,29 +160,21 @@ function filterPCList() {
         );
     }
     
-    // 1. อัปเดตรายการเครื่องให้เหลือเฉพาะที่มี Software
     renderPCOptions(filteredPcs);
     
-    // 2. ถ้าเลือก Software มา -> Auto Process
     if (filterVal) {
-        // เปลี่ยนโหมดเป็น AI ทันที
         document.getElementById('bkTypeSelect').value = 'AI';
         toggleSoftwareList();
 
-        // 🔥 3. ระบบช่วยเลือกเครื่องให้อัตโนมัติ (Auto-Lock)
         if (filteredPcs.length > 0) {
             const select = document.getElementById('bkPcSelect');
-            
-            // พยายามหาเครื่องที่ "ว่าง (available)" ก่อนเป็นอันดับแรก
             const bestChoice = filteredPcs.find(p => p.status === 'available');
             
             if (bestChoice) {
-                select.value = bestChoice.id; // เลือกเครื่องว่าง
+                select.value = bestChoice.id; 
             } else {
-                select.value = filteredPcs[0].id; // ถ้าไม่ว่าง เอาเครื่องแรกในลิสต์
+                select.value = filteredPcs[0].id; 
             }
-
-            // 🔥 4. สั่งโหลดรายการ Checkbox ของเครื่องที่ถูกเลือกทันที
             updateSoftwareList();
         }
     }
@@ -233,11 +219,9 @@ function updateSoftwareList() {
         return;
     }
 
-    // ดึงค่าจาก Filter เพื่อเอามาติ๊กถูกอัตโนมัติ
     const filterVal = document.getElementById('bkSoftwareFilter').value;
 
     pc.installedSoftware.forEach((sw, index) => {
-        // ✅ ถ้าชื่อตรงกับที่ Filter ไว้ ให้ติ๊กถูกเลย (Auto-Check)
         const isChecked = (sw === filterVal) ? 'checked' : ''; 
 
         const html = `
@@ -291,10 +275,12 @@ function saveBooking() {
     if (regData) finalUserName = regData.prefix + regData.name;
 
     const bookings = DB.getBookings();
+    
+    // เช็คคิวชน (รวมทั้ง approved, pending, completed)
     const conflict = bookings.find(b => {
         return String(b.pcId) === String(pcId) && 
                b.date === date && 
-               ['reserved', 'in_use', 'approved'].includes(b.status) &&
+               ['approved', 'in_use'].includes(b.status) && // ✅ เช็คเฉพาะสถานะที่กินที่
                (start < b.endTime && end > b.startTime);
     });
 
@@ -323,7 +309,8 @@ function saveBooking() {
         endTime: end,
         type: type,
         softwareList: selectedSoftware, 
-        status: 'reserved'
+        // ✅ แก้ไข: บันทึกเป็น 'approved' ทันทีเมื่อ Admin จองเอง
+        status: 'approved'
     };
 
     bookings.push(newBooking);

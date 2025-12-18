@@ -51,10 +51,11 @@
                         <div class="col-auto">
                             <select id="bookingStatusFilter" class="form-select form-select-sm" onchange="renderBookings()">
                                 <option value="all">-- ทุกสถานะ --</option>
-                                <option value="reserved">🟡 จอง (Reserved)</option>
-                                <option value="in_use">🔴 ใช้งานอยู่ (In Use)</option>
+                                <option value="pending">⏳ รออนุมัติ (Pending)</option>
+                                <option value="approved">🟡 อนุมัติแล้ว (Approved)</option>
                                 <option value="completed">🟢 ใช้งานเสร็จสิ้น (Completed)</option>
-                                <option value="no_show">⚪ ไม่พบการใช้งาน (No Show)</option>
+                                <option value="no_show">⚪ ไม่มาตามนัด (No Show)</option>
+                                <option value="rejected">❌ ยกเลิก (Rejected)</option>
                             </select>
                         </div>
                     </div>
@@ -119,6 +120,7 @@
                             <select id="bkPcSelect" class="form-select" required onchange="updateSoftwareList()">
                                 <option value="">-- กรุณาเลือกเครื่อง --</option>
                             </select>
+                            <div class="form-text small" id="pcSoftwareHint">-</div>
                         </div>
                         
                         <div class="row g-2 mb-3">

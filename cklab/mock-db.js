@@ -1,25 +1,25 @@
-/* mock-db.js (ฉบับสมบูรณ์ + ระบบจอง) */
+/* mock-db.js (Final Version: +Booking Status Logic) */
 
 // ==========================================
 // 1. MOCK DATA (ข้อมูลจำลอง)
 // ==========================================
 
-// 1.0 ข้อมูลการจอง (Booking) - เพิ่มใหม่
+// 1.0 ข้อมูลการจอง (Booking)
 const DEFAULT_BOOKINGS = [
     { 
         id: 'b1', 
         userId: '66123456', userName: 'สมชาย รักเรียน', 
         pcId: '1', pcName: 'PC-01', 
-        date: new Date().toLocaleDateString('en-CA'), // วันนี้
+        date: new Date().toLocaleDateString('en-CA'), 
         startTime: '09:00', endTime: '11:00', 
         note: 'ทำโปรเจกต์จบ', 
-        status: 'pending' // pending, approved, rejected
+        status: 'pending' // pending, approved, rejected, completed
     },
     { 
         id: 'b2', 
         userId: 'External', userName: 'คุณวิชัย (Guest)', 
         pcId: '5', pcName: 'PC-05', 
-        date: new Date().toLocaleDateString('en-CA'), // วันนี้
+        date: new Date().toLocaleDateString('en-CA'), 
         startTime: '13:00', endTime: '15:00', 
         note: 'ทดสอบ AI', 
         status: 'approved' 
@@ -88,28 +88,19 @@ const DEFAULT_GENERAL_CONFIG = {
 };
 
 
-// 1.6 จำลอง External System: REG API (ข้อมูลครบทุกหน่วยงาน)
+// 1.6 จำลอง External System: REG API
 const MOCK_REG_DB = {
-    // --- ข้อมูลเดิม ---
     "66123456": { prefix: "นาย", name: "สมชาย รักเรียน", faculty: "วิศวกรรมศาสตร์", department: "คอมพิวเตอร์", year: "3", level: "ปริญญาตรี", role: "student" },
     "66112233": { prefix: "นางสาว", name: "มานี มีปัญญา", faculty: "วิทยาศาสตร์", department: "วิทยาการคอมพิวเตอร์", year: "2", level: "ปริญญาตรี", role: "student" },
     "66100000": { prefix: "นาย", name: "เอกภพ มั่นคง", faculty: "มนุษยศาสตร์", department: "ภาษาไทย", year: "4", level: "ปริญญาตรี", role: "student" },
     "66100001": { prefix: "นางสาว", name: "ดวงดาว ไกลโพ้น", faculty: "ศึกษาศาสตร์", department: "คณิตศาสตร์", year: "1", level: "ปริญญาตรี", role: "student" },
     "67200000": { prefix: "นาย", name: "ผู้มาเยือน", faculty: "บุคคลภายนอก", department: "-", year: "-", level: "บุคคลทั่วไป", role: "external" },
     "ubu_staff": { prefix: "ดร.", name: "ใจดี มีวิชา", faculty: "สำนักคอมพิวเตอร์และเครือข่าย", department: "-", year: "-", level: "บุคลากร", role: "staff" },
-
-    // =============================================
-    // 1. กลุ่มกอง (Staff)
-    // =============================================
     "staff_karnklang": { prefix: "นาย", name: "บุคลากร กองกลาง", faculty: "กองกลาง", year: "-", level: "บุคลากร", role: "staff" },
     "staff_personel": { prefix: "นาง", name: "เจ้าหน้าที่ กองการเจ้าหน้าที่", faculty: "กองการเจ้าหน้าที่", year: "-", level: "บุคลากร", role: "staff" },
     "staff_klung": { prefix: "ดร.", name: "การเงิน กองคลัง", faculty: "กองคลัง", year: "-", level: "บุคลากร", role: "staff" },
     "staff_edu_serv": { prefix: "นาย", name: "บริการ กองบริการการศึกษา", faculty: "กองบริการการศึกษา", year: "-", level: "บุคลากร", role: "staff" },
     "staff_plan": { prefix: "นาง", name: "แผนงาน กองแผนงาน", faculty: "กองแผนงาน", year: "-", level: "บุคลากร", role: "staff" },
-
-    // =============================================
-    // 2. กลุ่มคณะ (Student / Faculty)
-    // =============================================
     "66010001": { prefix: "น.ศ.", name: "นิติ ธรรม", faculty: "คณะนิติศาสตร์", year: "1", level: "ปริญญาตรี", role: "student" },
     "66020001": { prefix: "น.ศ.", name: "บริหาร จัดการ", faculty: "คณะบริหารศาสตร์", year: "2", level: "ปริญญาตรี", role: "student" },
     "66030001": { prefix: "น.ศ.", name: "พยาบาล ใจดี", faculty: "คณะพยาบาลศาสตร์", year: "3", level: "ปริญญาตรี", role: "student" },
@@ -122,10 +113,6 @@ const MOCK_REG_DB = {
     "66100002": { prefix: "น.ศ.", name: "ครู ศึกษา", faculty: "คณะศึกษาศาสตร์", year: "2", level: "ปริญญาตรี", role: "student" },
     "66110001": { prefix: "น.ศ.", name: "เกษตร ยั่งยืน", faculty: "คณะเกษตรศาสตร์", year: "3", level: "ปริญญาตรี", role: "student" },
     "66120001": { prefix: "น.ศ.พ.", name: "หมอ รักษา", faculty: "วิทยาลัยแพทยศาสตร์และการสาธารณสุข", year: "5", level: "ปริญญาตรี", role: "student" },
-
-    // =============================================
-    // 3. กลุ่มสำนักงาน / สภา / องค์กร (Staff)
-    // =============================================
     "staff_uplace": { prefix: "จนท.", name: "ยูเพลส บริการ", faculty: "สถานปฏิบัติการโรงแรมฯ (U-Place)", year: "-", level: "บุคลากร", role: "staff" },
     "staff_council": { prefix: "อ.", name: "สภา อาจารย์", faculty: "สภาอาจารย์", year: "-", level: "บุคลากร", role: "staff" },
     "staff_audit": { prefix: "นาย", name: "ตรวจสอบ ภายใน", faculty: "สำนักงานตรวจสอบภายใน", year: "-", level: "บุคลากร", role: "staff" },
@@ -136,10 +123,6 @@ const MOCK_REG_DB = {
     "staff_research": { prefix: "ดร.", name: "วิจัย ก้าวหน้า", faculty: "สำนักงานส่งเสริมและบริหารงานวิจัย", year: "-", level: "บุคลากร", role: "staff" },
     "staff_security": { prefix: "รปภ.", name: "ปลอดภัย หายห่วง", faculty: "สำนักงานรักษาความปลอดภัย", year: "-", level: "บุคลากร", role: "staff" },
     "staff_coop": { prefix: "จนท.", name: "ออมทรัพย์ มั่นคง", faculty: "สหกรณ์ออมทรัพย์มหาวิทยาลัยอุบลราชธานี", year: "-", level: "บุคลากร", role: "staff" },
-
-    // =============================================
-    // 4. กลุ่มศูนย์ / สำนัก / อุทยาน (Staff)
-    // =============================================
     "staff_km": { prefix: "นักวิชาการ", name: "เรียนรู้ เคเอ็ม", faculty: "ศูนย์การจัดการความรู้ (KM)", year: "-", level: "บุคลากร", role: "staff" },
     "staff_sesame": { prefix: "ป้า", name: "งา ยั่งยืน", faculty: "ศูนย์การเรียนรู้และพัฒนา \"งา\" เชิงเกษตรอุตสาหกรรมครัวเรือนแบบยั่งยืน", year: "-", level: "บุคลากร", role: "staff" },
     "staff_sci_tool": { prefix: "ดร.", name: "เครื่องมือ วิทย์", faculty: "ศูนย์เครื่องมือวิทยาศาสตร์", year: "-", level: "บุคลากร", role: "staff" },
@@ -152,29 +135,21 @@ const MOCK_REG_DB = {
 };
 
 
-// 1.7 ข้อมูล Log จำลองสำหรับ Report
+// 1.7 ข้อมูล Log จำลอง
 const MOCK_REG_DB_USERS_FOR_LOG = Object.values(MOCK_REG_DB); 
 
-// ฟังก์ชันสุ่ม Log ให้ตรงกับ Software จริงของเครื่อง
 function generateMockLogEntry(dateOffsetDays) {
     const user = MOCK_REG_DB_USERS_FOR_LOG[Math.floor(Math.random() * MOCK_REG_DB_USERS_FOR_LOG.length)];
     const userId = Object.keys(MOCK_REG_DB).find(key => MOCK_REG_DB[key] === user);
-
-    // 1. สุ่มเครื่อง PC จากรายการที่มีอยู่จริง
     const targetPC = DEFAULT_PCS[Math.floor(Math.random() * DEFAULT_PCS.length)];
     const pcId = targetPC.id;
 
-    // 2. ดึง Software จริงที่ติดตั้งบนเครื่องนั้นมาบันทึก
     let usedSoftwareLog = [];
     let isAILog = false;
 
-    // ** แก้ไขตรงนี้: เปลี่ยน targetPC.software เป็น targetPC.installedSoftware **
     if (targetPC.installedSoftware && targetPC.installedSoftware.length > 0) {
-        // สุ่มมา 1 ตัวจากรายการที่ติดตั้งบนเครื่องนี้
         const installedItem = targetPC.installedSoftware[Math.floor(Math.random() * targetPC.installedSoftware.length)];
         usedSoftwareLog.push(installedItem);
-
-        // ตรวจสอบว่าเป็น AI หรือไม่
         isAILog = installedItem.toLowerCase().includes('gpt') || 
                   installedItem.toLowerCase().includes('claude') || 
                   installedItem.toLowerCase().includes('perplexity') || 
@@ -214,7 +189,6 @@ function generateMockLogEntry(dateOffsetDays) {
 function generateMockLogs(numLogsPerMonth) {
     let logs = [];
     const daysInLastThreeMonths = 90;
-    
     for(let i = 0; i < numLogsPerMonth * 3; i++) {
         const randomDayOffset = Math.floor(Math.random() * daysInLastThreeMonths);
         logs.push(generateMockLogEntry(randomDayOffset));
@@ -223,6 +197,7 @@ function generateMockLogs(numLogsPerMonth) {
 }
 
 const DEFAULT_LOGS = generateMockLogs(50);
+
 
 // ==========================================
 // 2. DATABASE LOGIC (ระบบจัดการข้อมูล)
@@ -242,7 +217,6 @@ const DB = {
     updatePCStatus: (id, status, user = null) => {
         let pcs = DB.getPCs();
         let pc = pcs.find(p => String(p.id) === String(id));
-        
         if (pc) {
             pc.status = status;
             pc.currentUser = user;
@@ -251,9 +225,19 @@ const DB = {
         }
     },
 
-    // Booking Management (เพิ่มใหม่)
+    // Booking Management
     getBookings: () => DB.getData('ck_bookings', DEFAULT_BOOKINGS),
     saveBookings: (data) => DB.setData('ck_bookings', data),
+
+    // ✅ เพิ่มฟังก์ชันอัปเดตสถานะ Booking (เช่น approved -> completed)
+    updateBookingStatus: (bookingId, newStatus) => {
+        let bookings = DB.getBookings();
+        const index = bookings.findIndex(b => b.id === bookingId);
+        if (index !== -1) {
+            bookings[index].status = newStatus;
+            DB.saveBookings(bookings);
+        }
+    },
 
     // Software Library
     getSoftwareLib: () => DB.getData('ck_software', DEFAULT_SOFTWARE),

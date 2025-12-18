@@ -1,17 +1,15 @@
-/* admin-monitor.js (Final Enhanced Version) */
+/* admin-monitor.js (Final Enhanced Version: Real-time + Booking Logic Fixes) */
 
 let checkInModal;
 let currentTab = 'internal';
 let verifiedUserData = null;
-let currentFilter = 'all'; // ตัวแปรเก็บสถานะการกรองปัจจุบัน
-let searchQuery = '';      // ตัวแปรเก็บคำค้นหา
+let currentFilter = 'all'; 
+let searchQuery = '';      
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. เช็คสิทธิ์ Admin
     const session = DB.getSession();
-    if (!session || !session.user || session.user.role !== 'admin') {
-        // window.location.href = 'admin-login.html'; // Uncomment ในระบบจริง
-    }
+    // if (!session || !session.user || session.user.role !== 'admin') window.location.href = 'admin-login.html';
 
     // 2. Init Modal
     const modalEl = document.getElementById('checkInModal');
@@ -22,21 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. เริ่มทำงาน
     renderMonitor();
     updateClock();
-    checkAndSwitchBookingQueue(); // เช็คคิว 1 รอบ
+    checkAndSwitchBookingQueue(); // เช็คคิวทันที
 
-    // Auto Refresh (ทุก 5 วินาที)
+    // Auto Refresh
     setInterval(() => {
-        // อัปเดตเฉพาะตอน Modal ปิดอยู่ เพื่อไม่ให้ขัดจังหวะการกรอกข้อมูล
         if (modalEl && !modalEl.classList.contains('show')) {
             renderMonitor();
         }
-    }, 5000);
+    }, 2000); // 2 วินาทีเพื่อให้ดู Realtime
     
-    // นาฬิกา (ทุก 1 วินาที)
     setInterval(updateClock, 1000);
-    
-    // เช็คคิวจอง (ทุก 1 นาที)
-    setInterval(checkAndSwitchBookingQueue, 60000);
+    setInterval(checkAndSwitchBookingQueue, 60000); // เช็คคิวทุก 1 นาที
 });
 
 function updateClock() {
@@ -46,7 +40,7 @@ function updateClock() {
 }
 
 // ==========================================
-// 🔄 Auto Booking Switcher (ฉลาดขึ้น)
+// 🔄 Auto Booking Switcher (ฉลาดขึ้น + จัดการ No-Show)
 // ==========================================
 function checkAndSwitchBookingQueue() {
     const pcs = DB.getPCs();
@@ -73,21 +67,25 @@ function checkAndSwitchBookingQueue() {
             const [eh, em] = b.endTime.split(':').map(Number);
             const start = sh * 60 + sm;
             const end = eh * 60 + em;
+
+            // ✅ เพิ่ม Logic No-Show: ถ้าเลยเวลาเริ่มไป 15 นาทีแล้ว ยังไม่ Check-in (สถานะยัง approved)
+            if (currentMinutes > (start + 15) && b.status === 'approved') {
+                return false; // ถือว่า booking นี้ใช้ไม่ได้แล้ว (ปล่อยให้หลุดไป)
+            }
+
             // แถมเวลาให้ Check-in ก่อน 15 นาที (Buffer)
             return currentMinutes >= (start - 15) && currentMinutes < end;
         });
 
         if (activeBooking) {
-            // ถึงเวลาจองแล้ว -> เปลี่ยนสถานะเป็น Reserved (ถ้ายังไม่เป็น)
+            // ถึงเวลาจองแล้ว -> เปลี่ยนสถานะเป็น Reserved
             if (pc.status !== 'reserved' || pc.currentUser !== activeBooking.userName) {
-                console.log(`[Auto] Locking PC-${pc.id} for ${activeBooking.userName}`);
                 DB.updatePCStatus(pc.id, 'reserved', activeBooking.userName);
                 hasChanges = true;
             }
         } else {
-            // หมดเวลาจองแล้ว หรือไม่มีคิว -> คืนสถานะว่าง (ถ้าค้างอยู่ที่ Reserved)
+            // หมดเวลาจองแล้ว หรือไม่มีคิว (หรือสายเกินกำหนด) -> คืนสถานะว่าง
             if (pc.status === 'reserved') {
-                console.log(`[Auto] Releasing PC-${pc.id} to Available`);
                 DB.updatePCStatus(pc.id, 'available');
                 hasChanges = true;
             }
@@ -98,16 +96,15 @@ function checkAndSwitchBookingQueue() {
 }
 
 // ==========================================
-// 🖥️ Render Monitor Grid (รองรับ Search & Filter)
+// 🖥️ Render Monitor Grid & Stats
 // ==========================================
 
-// ฟังก์ชันสำหรับปุ่ม Filter (ถ้าจะเพิ่มใน HTML)
 function filterPC(status) {
     currentFilter = status;
+    updateFilterButtons(status);
     renderMonitor();
 }
 
-// ฟังก์ชันสำหรับช่อง Search (ถ้าจะเพิ่มใน HTML)
 function searchPC() {
     const input = document.getElementById('searchPC');
     if (input) {
@@ -116,22 +113,44 @@ function searchPC() {
     }
 }
 
+function updateMonitorStats(allPcs) {
+    const counts = { available: 0, in_use: 0, reserved: 0, maintenance: 0 };
+    allPcs.forEach(pc => {
+        if (counts.hasOwnProperty(pc.status)) counts[pc.status]++;
+        else counts.maintenance++;
+    });
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.innerText = val;
+            el.style.transition = 'transform 0.2s';
+            el.style.transform = 'scale(1.2)';
+            setTimeout(() => el.style.transform = 'scale(1)', 200);
+        }
+    };
+    setVal('count-available', counts.available);
+    setVal('count-in_use', counts.in_use);
+    setVal('count-reserved', counts.reserved);
+    setVal('count-maintenance', counts.maintenance);
+}
+
 function renderMonitor() {
     const grid = document.getElementById('monitorGrid');
     if(!grid) return;
 
-    let pcs = DB.getPCs();
+    const allPcs = DB.getPCs();
+    updateMonitorStats(allPcs);
+
     const bookings = DB.getBookings();
     const todayStr = new Date().toISOString().split('T')[0]; 
 
-    // 1. กรองตามสถานะ (Filter)
+    let displayPcs = allPcs;
     if (currentFilter !== 'all') {
-        pcs = pcs.filter(pc => pc.status === currentFilter);
+        displayPcs = displayPcs.filter(pc => pc.status === currentFilter);
     }
-
-    // 2. กรองตามคำค้นหา (Search)
     if (searchQuery) {
-        pcs = pcs.filter(pc => 
+        displayPcs = displayPcs.filter(pc => 
             pc.name.toLowerCase().includes(searchQuery) || 
             (pc.currentUser && pc.currentUser.toLowerCase().includes(searchQuery))
         );
@@ -139,51 +158,38 @@ function renderMonitor() {
 
     grid.innerHTML = '';
 
-    if (pcs.length === 0) {
+    if (displayPcs.length === 0) {
         grid.innerHTML = `<div class="col-12 text-center text-muted py-5">ไม่พบข้อมูลเครื่องคอมพิวเตอร์</div>`;
         return;
     }
 
-    pcs.forEach(pc => {
+    displayPcs.forEach(pc => {
         let statusClass = '', iconClass = '', label = '', cardBorder = '';
-
         switch(pc.status) {
-            case 'available': 
-                statusClass = 'text-success'; cardBorder = 'border-success'; iconClass = 'bi-check-circle'; label = 'ว่าง (Available)'; break;
-            case 'in_use': 
-                statusClass = 'text-danger'; cardBorder = 'border-danger'; iconClass = 'bi-person-workspace'; label = 'ใช้งาน (In Use)'; break;
-            case 'reserved': 
-                statusClass = 'text-warning'; cardBorder = 'border-warning'; iconClass = 'bi-bookmark-fill'; label = 'จอง (Reserved)'; break;
-            default: 
-                statusClass = 'text-secondary'; cardBorder = 'border-secondary'; iconClass = 'bi-wrench-adjustable'; label = 'ชำรุด (Maintenance)';
+            case 'available': statusClass = 'text-success'; cardBorder = 'border-success'; iconClass = 'bi-check-circle'; label = 'ว่าง (Available)'; break;
+            case 'in_use': statusClass = 'text-danger'; cardBorder = 'border-danger'; iconClass = 'bi-person-workspace'; label = 'ใช้งาน (In Use)'; break;
+            case 'reserved': statusClass = 'text-warning'; cardBorder = 'border-warning'; iconClass = 'bi-bookmark-fill'; label = 'จอง (Reserved)'; break;
+            default: statusClass = 'text-secondary'; cardBorder = 'border-secondary'; iconClass = 'bi-wrench-adjustable'; label = 'ชำรุด (Maintenance)';
         }
 
         const userDisplay = pc.currentUser ? 
             `<div class="mt-2 small text-dark fw-bold text-truncate" title="${pc.currentUser}"><i class="bi bi-person-fill"></i> ${pc.currentUser}</div>` : 
             `<div class="mt-2 small text-muted">-</div>`;
 
-        // Active Booking Check
         let activeBooking = bookings.find(b => 
-            String(b.pcId) === String(pc.id) && 
-            b.date === todayStr && 
-            b.status === 'approved' &&
-            (pc.currentUser ? b.userName === pc.currentUser : true) // ถ้ามีคนนั่ง ต้องชื่อตรงกัน
+            String(b.pcId) === String(pc.id) && b.date === todayStr && b.status === 'approved' &&
+            (pc.currentUser ? b.userName === pc.currentUser : true)
         );
 
-        let timeSlotInfo = '';
-        if (activeBooking) {
-            timeSlotInfo = `<div class="badge bg-warning text-dark mt-1 border"><i class="bi bi-calendar-check"></i> ${activeBooking.startTime} - ${activeBooking.endTime}</div>`;
-        } else {
-            timeSlotInfo = `<div class="mt-1" style="height: 21px;"></div>`; // Spacer
-        }
+        let timeSlotInfo = activeBooking ? 
+            `<div class="badge bg-warning text-dark mt-1 border"><i class="bi bi-calendar-check"></i> ${activeBooking.startTime} - ${activeBooking.endTime}</div>` : 
+            `<div class="mt-1" style="height: 21px;"></div>`;
 
-        // Timer Badge (ถ้าใช้งานอยู่)
         let usageTimeBadge = '';
         if (pc.status === 'in_use' && pc.startTime) {
             const diffMs = Date.now() - pc.startTime;
-            const diffMins = Math.floor(diffMs / 60000);
-            const hrs = Math.floor(diffMins / 60);
-            const mins = diffMins % 60;
+            const hrs = Math.floor(diffMs / 3600000);
+            const mins = Math.floor((diffMs % 3600000) / 60000);
             const timeTxt = hrs > 0 ? `${hrs}ชม. ${mins}น.` : `${mins} นาที`;
             const badgeColor = hrs >= 3 ? 'bg-danger' : 'bg-primary';
             usageTimeBadge = `<div class="badge ${badgeColor} mt-1 border"><i class="bi bi-stopwatch-fill"></i> ${timeTxt}</div>`;
@@ -191,7 +197,6 @@ function renderMonitor() {
             usageTimeBadge = `<div class="mt-1" style="height: 21px;"></div>`; 
         }
 
-        // Software Tags (Limit 2)
         let softwareHtml = '';
         if (Array.isArray(pc.installedSoftware) && pc.installedSoftware.length > 0) {
             softwareHtml = '<div class="mt-2 pt-2 border-top d-flex flex-wrap justify-content-center gap-1">';
@@ -207,7 +212,6 @@ function renderMonitor() {
             softwareHtml = '<div class="mt-2 pt-2 border-top" style="height: 29px;"></div>';
         }
 
-        // ⚡️ Card HTML
         grid.innerHTML += `
             <div class="col-6 col-md-4 col-lg-3">
                 <div class="card h-100 shadow-sm ${cardBorder} position-relative pc-card-hover" 
@@ -225,8 +229,7 @@ function renderMonitor() {
                         ${softwareHtml}
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
 }
 
@@ -246,7 +249,19 @@ function handlePcClick(pcId) {
         }
     } else if (pc.status === 'reserved') {
         if(confirm(`🟡 เครื่อง ${pc.name} ถูกจองโดย ${pc.currentUser}\n\nต้องการ "ยืนยันการเข้าใช้งาน" (Check-in) หรือไม่?`)) {
-            // จองแล้ว -> เปลี่ยนเป็น In Use ได้เลย
+            // จองแล้ว -> เปลี่ยนเป็น In Use + ตัดสิทธิ์ Booking
+            
+            // *ต้องหา Booking ID ก่อนตัดสิทธิ์*
+            const bookings = DB.getBookings();
+            const todayStr = new Date().toLocaleDateString('en-CA');
+            const validBooking = bookings.find(b => 
+                String(b.pcId) === String(pc.id) && b.date === todayStr && b.status === 'approved' && b.userName === pc.currentUser
+            );
+
+            if(validBooking) {
+                DB.updateBookingStatus(validBooking.id, 'completed'); // ตัดสิทธิ์
+            }
+
             DB.updatePCStatus(pc.id, 'in_use', pc.currentUser);
             DB.saveLog({
                 action: 'START_SESSION',
@@ -265,14 +280,11 @@ function performForceCheckout(pcId) {
     const pc = pcs.find(p => String(p.id) === String(pcId));
     const currentUser = pc ? pc.currentUser : 'Unknown';
     
-    // บันทึก Log ว่าแอดมินเตะออก (ไม่ใส่คะแนน เพื่อไม่ให้กราฟเพี้ยน)
     DB.saveLog({
         action: 'Force Check-out',
-        pcId: pcId, 
-        userName: currentUser, 
-        userRole: 'System',
+        pcId: pcId, userName: currentUser, userRole: 'System',
         details: 'Admin Forced Logout via Monitor',
-        satisfactionScore: null // ✅ สำคัญ: ไม่ใส่คะแนนมั่ว
+        satisfactionScore: null 
     });
 
     DB.updatePCStatus(pcId, 'available');
@@ -280,7 +292,7 @@ function performForceCheckout(pcId) {
 }
 
 // ==========================================
-// 📝 Modal & Form Logic (เหมือนเดิม)
+// 📝 Modal & Form Logic
 // ==========================================
 
 function openCheckInModal(pc) {
@@ -297,9 +309,7 @@ function openCheckInModal(pc) {
         swContainer.innerHTML = '<span class="text-muted small">- ไม่มีข้อมูล Software -</span>';
     }
     
-    switchTab('internal'); // Reset form
-    
-    // Clear Inputs
+    switchTab('internal'); 
     ['ubuUser', 'extIdCard', 'extName', 'extOrg'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('internalVerifyCard').classList.add('d-none');
     
@@ -340,7 +350,7 @@ function verifyUBUUser() {
     const userId = userIdInput.value.trim();
     if (!userId) { alert('กรุณากรอกรหัสนักศึกษา / บุคลากร'); userIdInput.focus(); return; }
     
-    const user = DB.checkRegAPI(userId); // จำลอง API
+    const user = DB.checkRegAPI(userId); 
     if (user) {
         verifiedUserData = { id: userId, name: user.prefix + user.name, faculty: user.faculty, role: user.role };
         document.getElementById('internalVerifyCard').classList.remove('d-none');
@@ -380,9 +390,41 @@ function confirmCheckIn() {
         faculty = extOrg || 'บุคคลภายนอก';
     }
 
+    // ✅ ตรวจสอบประเภทการใช้งาน (Booking Check)
+    const usageType = document.querySelector('input[name="usageType"]:checked').value;
+
+    if (usageType === 'booking') {
+        const bookings = DB.getBookings(); 
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        const validBooking = bookings.find(b => 
+            String(b.pcId) === String(pcId) &&
+            b.date === todayStr &&
+            b.status === 'approved' &&
+            b.userName === finalName
+        );
+
+        if (!validBooking) {
+            alert(`⚠️ ไม่พบข้อมูลการจอง!\n\nคุณ ${finalName} ไม่ได้จองเครื่อง PC-${pcId} ไว้ในวันนี้\nกรุณาเลือกรูปแบบ "Walk-in" แทนครับ`);
+            return; 
+        }
+
+        const [startH, startM] = validBooking.startTime.split(':').map(Number);
+        const bookingStartMins = startH * 60 + startM;
+        
+        if (currentMinutes < (bookingStartMins - 15)) {
+            alert(`⚠️ ยังไม่ถึงเวลาจอง!\n\nคิวจองของคุณคือ ${validBooking.startTime} - ${validBooking.endTime}\nกรุณารอสักครู่`);
+            return;
+        }
+
+        // ✅ ตัดสิทธิ์การจอง (Update status -> completed)
+        DB.updateBookingStatus(validBooking.id, 'completed');
+    }
+
     DB.updatePCStatus(pcId, 'in_use', finalName);
     
-    // บันทึก Log เริ่มใช้งาน
     DB.saveLog({
         action: 'START_SESSION',
         userId: finalId, 
@@ -390,15 +432,14 @@ function confirmCheckIn() {
         userRole: userType, 
         userFaculty: faculty,
         pcId: pcId,
-        startTime: new Date().toISOString(), // บันทึกเวลาเริ่มจริงจัง
-        details: 'Admin Manual Check-in'
+        startTime: new Date().toISOString(),
+        details: usageType === 'booking' ? 'Check-in from Booking' : 'Walk-in User'
     });
 
     if(checkInModal) checkInModal.hide();
     renderMonitor();
 }
 
-// ✅ ฟังก์ชันจัดการหน้าตาปุ่ม Filter
 function updateFilterButtons(activeStatus) {
     const buttons = {
         'all': document.getElementById('btn-all'),
@@ -407,31 +448,21 @@ function updateFilterButtons(activeStatus) {
         'reserved': document.getElementById('btn-reserved')
     };
 
-    // Reset ทุกปุ่มเป็น Outline
     Object.values(buttons).forEach(btn => {
         if(!btn) return;
         btn.className = "btn btn-sm rounded-pill px-3 me-1";
-        // Reset Style ตามสีเดิม
         if(btn.id.includes('all')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#495057'; btn.style.border = '1px solid #ced4da'; }
         if(btn.id.includes('available')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#198754'; btn.style.border = '1px solid #198754'; }
         if(btn.id.includes('in_use')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#dc3545'; btn.style.border = '1px solid #dc3545'; }
         if(btn.id.includes('reserved')) { btn.style.backgroundColor = 'transparent'; btn.style.color = '#ffc107'; btn.style.border = '1px solid #ffc107'; }
     });
 
-    // Set Active Button (Solid Color)
     const activeBtn = buttons[activeStatus];
     if(activeBtn) {
         activeBtn.style.color = 'white';
         if(activeStatus === 'all') { activeBtn.style.backgroundColor = '#495057'; activeBtn.style.borderColor = '#495057'; }
         if(activeStatus === 'available') { activeBtn.style.backgroundColor = '#198754'; activeBtn.style.borderColor = '#198754'; }
         if(activeStatus === 'in_use') { activeBtn.style.backgroundColor = '#dc3545'; activeBtn.style.borderColor = '#dc3545'; }
-        if(activeStatus === 'reserved') { activeBtn.style.backgroundColor = '#ffc107'; activeBtn.style.borderColor = '#ffc107'; activeBtn.style.color = '#000'; } // สีดำสำหรับพื้นเหลือง
+        if(activeStatus === 'reserved') { activeBtn.style.backgroundColor = '#ffc107'; activeBtn.style.borderColor = '#ffc107'; activeBtn.style.color = '#000'; } 
     }
-}
-
-// ✅ อัปเดตฟังก์ชัน filterPC เดิม ให้เรียกใช้ฟังก์ชันข้างบน
-function filterPC(status) {
-    currentFilter = status;
-    updateFilterButtons(status); // <-- เพิ่มบรรทัดนี้
-    renderMonitor();
 }

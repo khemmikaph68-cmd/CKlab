@@ -136,14 +136,13 @@ function validateForm() {
     
     const pc = DB.getPCs().find(p => p.id == FIXED_PC_ID);
     
-    // ✅ แก้ไข: อนุญาตให้ปุ่มทำงานได้ ถ้าเครื่องว่าง OR ถูกจองไว้ (reserved)
+    // อนุญาตให้ปุ่มทำงานได้ ถ้าเครื่องว่าง OR ถูกจองไว้ (reserved)
     const isAccessible = pc && (pc.status === 'available' || pc.status === 'reserved');
 
     if (isUserValid && isAccessible) {
         btn.disabled = false;
         btn.classList.replace('btn-secondary', 'btn-success');
         
-        // เปลี่ยนข้อความปุ่มถ้าเป็นการจอง
         if (pc.status === 'reserved') {
             btn.innerHTML = `<i class="bi bi-calendar-check me-2"></i>ยืนยันการเข้าใช้งาน (จองไว้)`;
         } else {
@@ -160,18 +159,17 @@ function validateForm() {
     }
 }
 
-// ✅ ฟังก์ชันยืนยันการเข้าใช้งาน (Check-in)
+// ✅ ฟังก์ชันยืนยันการเข้าใช้งาน (Check-in) ที่เพิ่ม Logic ตรวจสอบการจอง
 function confirmCheckIn() {
-    const pc = DB.getPCs().find(p => p.id == FIXED_PC_ID);
-    
-    // 1. เตรียมข้อมูลผู้ใช้
-    let finalUser = null;
-    const usageType = document.querySelector('input[name="usageType"]:checked').value;
+    // 1. ตรวจสอบว่ามีข้อมูลผู้ใช้ที่ Verify ผ่านแล้วหรือไม่
+    if (!verifiedUserData && activeTab === 'internal') {
+        alert('กรุณาตรวจสอบข้อมูลผู้ใช้ก่อน (กดปุ่มตรวจสอบ)');
+        return;
+    }
 
-    if (activeTab === 'internal') {
-        finalUser = verifiedUserData;
-    } else {
-        finalUser = {
+    // เตรียมข้อมูลผู้ใช้กรณี External
+    if (activeTab === 'external') {
+        verifiedUserData = {
             id: document.getElementById('extIdCard').value.trim(),
             name: document.getElementById('extName').value.trim(),
             faculty: document.getElementById('extOrg').value.trim() || 'บุคคลทั่วไป',
@@ -181,53 +179,72 @@ function confirmCheckIn() {
         };
     }
 
-    // 2. ตรวจสอบเงื่อนไขการจอง (Reserved Check)
-    if (pc.status === 'reserved') {
-        // เช็คว่าชื่อตรงกับที่จองไว้ไหม (เช็คแบบรวมๆ เผื่อพิมพ์ไม่ครบ)
-        const bookedName = pc.currentUser || ''; // Admin ใส่ชื่อไว้ตอนจอง
-        const currentName = finalUser.name || '';
+    // 2. ใช้ PC ID ที่ได้จาก URL (FIXED_PC_ID)
+    const pcId = FIXED_PC_ID; 
 
-        // ถ้าชื่อไม่คล้ายกันเลย ให้แจ้งเตือน (ป้องกันคนอื่นมาเนียนเข้า)
-        // ใช้ .includes เพื่อเช็คว่า "สมชาย" อยู่ใน "นายสมชาย รักเรียน" หรือไม่
-        if (!currentName.includes(bookedName) && !bookedName.includes(currentName)) {
-            const confirmSteal = confirm(`⚠️ เครื่องนี้ถูกจองไว้สำหรับ: "${bookedName}"\nแต่ชื่อของคุณคือ: "${currentName}"\n\nคุณยืนยันที่จะเข้าใช้งานใช่หรือไม่?`);
-            if (!confirmSteal) return;
+    // 3. ✅ ตรวจสอบประเภทการใช้งาน (Walk-in vs Booking)
+    const usageTypeEl = document.querySelector('input[name="usageType"]:checked');
+    const usageType = usageTypeEl ? usageTypeEl.value : 'walkin';
+
+    if (usageType === 'booking') {
+        const bookings = DB.getBookings(); // ดึงข้อมูลการจองทั้งหมด
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        // ค้นหา Booking ที่ตรงเงื่อนไข
+        const validBooking = bookings.find(b => 
+            String(b.pcId) === String(pcId) &&      // ตรงเครื่อง
+            b.date === todayStr &&                   // ตรงวัน
+            b.status === 'approved' &&               // สถานะอนุมัติ
+            b.userName === verifiedUserData.name     // ชื่อตรงกับที่ Verify
+        );
+
+        if (!validBooking) {
+            alert(`⚠️ ไม่พบข้อมูลการจอง!\n\nคุณ ${verifiedUserData.name} ไม่ได้จองเครื่อง PC-${pcId} ไว้ในวันนี้\n\nกรุณาเลือก "Walk-in" หรือตรวจสอบเครื่องที่ท่านจองครับ`);
+            return; // ❌ หยุดการทำงานทันที
         }
-    } else if (pc.status !== 'available') {
-        return alert(`❌ ไม่สามารถใช้งานได้ (สถานะ: ${pc.status})`);
-    }
 
-    // 3. เริ่ม Check-in (เปลี่ยนสถานะเป็น in_use)
-    const startTime = Date.now();
-    
-    // บันทึกลง Database (เปลี่ยนจาก Reserved -> In Use)
-    DB.updatePCStatus(FIXED_PC_ID, 'in_use', finalUser.name);
-    
-    // สร้าง Session
-    DB.setSession({ 
-        user: finalUser, 
-        pcId: FIXED_PC_ID, 
-        startTime: startTime, 
-        usageType: usageType 
-    });
+        // (Optional) เช็คเวลาเข้าสาย/ก่อนเวลา
+        const [startH, startM] = validBooking.startTime.split(':').map(Number);
+        const bookingStartMins = startH * 60 + startM;
+        
+        // ยอมให้เข้าก่อนเวลา 15 นาที
+        if (currentMinutes < (bookingStartMins - 15)) {
+            alert(`⏳ ยังไม่ถึงเวลาจอง\nคิวของคุณคือ ${validBooking.startTime} - ${validBooking.endTime}`);
+            return;
+        }
+    }
+    // ✅ จบส่วนที่เพิ่ม
+
+    // 4. บันทึก Session และเปลี่ยนหน้า
+    const sessionData = {
+        user: {
+            id: verifiedUserData.id,
+            name: verifiedUserData.name,
+            userType: verifiedUserData.role,
+            faculty: verifiedUserData.faculty
+        },
+        pcId: pcId,
+        startTime: Date.now(),
+        loginMethod: usageType
+    };
+
+    DB.setSession(sessionData); // บันทึก Session ลง LocalStorage
+    DB.updatePCStatus(pcId, 'in_use', verifiedUserData.name); // อัปเดตสถานะเครื่องใน DB
 
     // บันทึก Log
-    DB.saveLog({ 
-        action: 'START_SESSION', 
-        userId: finalUser.id, 
-        userName: finalUser.name, 
-        userFaculty: finalUser.faculty,
-        userLevel: finalUser.level,
-        userYear: finalUser.year,
-        userRole: finalUser.role,
-        pcId: FIXED_PC_ID, 
-        startTime: new Date(startTime).toISOString(),
-        durationMinutes: 0, 
-        usedSoftware: pc.installedSoftware || [], // ใช้ installedSoftware ให้ตรง
-        isAIUsed: (pc.installedSoftware || []).some(s => s.toLowerCase().includes('ai') || s.toLowerCase().includes('gpt'))
+    DB.saveLog({
+        action: 'START_SESSION',
+        userId: verifiedUserData.id,
+        userName: verifiedUserData.name,
+        userRole: verifiedUserData.role,
+        userFaculty: verifiedUserData.faculty,
+        pcId: pcId,
+        startTime: new Date().toISOString(),
+        details: usageType === 'booking' ? 'User Check-in (Booking)' : 'User Check-in (Walk-in)'
     });
 
-    // สำเร็จ!
-    alert(`✅ Check-in สำเร็จ!\nยินดีต้อนรับคุณ ${finalUser.name}`);
+    // ไปยังหน้าจับเวลา
     window.location.href = 'timer.html';
 }
