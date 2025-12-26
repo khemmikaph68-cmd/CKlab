@@ -1,4 +1,4 @@
-/* admin-software.js (Final: Manage Software & Time Slots) */
+/* admin-software.js (Updated: Enable Search by Type) */
 
 let softwareModal;
 
@@ -16,92 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if(modalEl) softwareModal = new bootstrap.Modal(modalEl);
 
     // 3. Render Data
-    renderTable();      // วาดตาราง Software
-    renderTimeSlots();  // วาดปุ่มจัดการเวลา
+    renderTable();
 });
 
 // ==========================================
-// ✅✅✅ TIME SLOT MANAGEMENT (จัดการรอบเวลา) ✅✅✅
-// ==========================================
-
-function renderTimeSlots() {
-    const container = document.getElementById('timeSlotContainer');
-    if (!container) return;
-
-    // ดึงข้อมูลรอบเวลาจาก DB
-    const slots = (DB.getAiTimeSlots && typeof DB.getAiTimeSlots === 'function') 
-                  ? DB.getAiTimeSlots() 
-                  : [];
-
-    container.innerHTML = '';
-
-    if (slots.length === 0) {
-        container.innerHTML = '<div class="col-12 text-center text-muted py-3">ไม่พบข้อมูลรอบเวลา</div>';
-        return;
-    }
-
-    slots.forEach(slot => {
-        // เช็คสถานะเพื่อกำหนดสี
-        const isChecked = slot.active ? 'checked' : '';
-        const statusText = slot.active ? 'เปิดให้บริการ' : 'ปิดชั่วคราว';
-        const statusClass = slot.active ? 'text-success' : 'text-muted';
-        const cardBorder = slot.active ? 'border-primary' : 'border-secondary';
-        const bgClass = slot.active ? 'bg-white' : 'bg-light';
-        
-        // ถ้ามี label (เช่น "ตลอดวัน") ให้แสดง label แทนเวลา
-        const displayText = slot.label || `${slot.start} - ${slot.end}`;
-
-        container.innerHTML += `
-            <div class="col-md-3 col-sm-6">
-                <div class="card h-100 ${bgClass} ${cardBorder} border-opacity-25 shadow-sm">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-3">
-                        <h5 class="fw-bold mb-1 text-center">${displayText}</h5>
-                        <small class="fw-bold ${statusClass} mb-3">● ${statusText}</small>
-                        
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" 
-                                   id="slot_${slot.id}" ${isChecked} 
-                                   onchange="toggleTimeSlot(${slot.id})">
-                            <label class="form-check-label small text-muted" for="slot_${slot.id}">สถานะ</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-}
-
-function toggleTimeSlot(id) {
-    let slots = DB.getAiTimeSlots();
-    const index = slots.findIndex(s => s.id === id);
-    if (index !== -1) {
-        slots[index].active = !slots[index].active; // สลับสถานะ
-        DB.saveAiTimeSlots(slots);
-        renderTimeSlots(); // รีเฟรชหน้าจอ
-    }
-}
-
-// ✅ ฟังก์ชันรีเซ็ตค่าเริ่มต้น (ดึงจาก DEFAULT_AI_SLOTS ใน mock-db.js)
-function resetDefaultSlots() {
-    if(confirm("ต้องการรีเซ็ตการตั้งค่ารอบเวลาเป็นค่าเริ่มต้น?")) {
-        // ลบข้อมูลที่เก็บใน LocalStorage ออก เพื่อให้ระบบกลับไปอ่านค่า Default ใน mock-db.js
-        localStorage.removeItem('ck_ai_slots'); 
-        
-        // บังคับ Reload หน้าจอเพื่อให้ค่า Default ถูกโหลดเข้ามาใหม่
-        renderTimeSlots();
-        alert("รีเซ็ตเรียบร้อยแล้ว");
-    }
-}
-
-// ==========================================
-// 💻 SOFTWARE MANAGEMENT (จัดการซอฟต์แวร์)
+// 💻 SOFTWARE MANAGEMENT
 // ==========================================
 
 function renderTable() {
     const tbody = document.getElementById('softwareTableBody');
     let lib = DB.getSoftwareLib(); 
 
-    // --- ส่วนที่ 1: อัปเดตตัวเลขการ์ดสถิติ ---
+    // --- 1. Stats ---
     const total = lib.length;
     const aiCount = lib.filter(i => i.type === 'AI').length;
     const swCount = lib.filter(i => i.type === 'Software').length;
@@ -110,18 +36,19 @@ function renderTable() {
     if(document.getElementById('countAI')) document.getElementById('countAI').innerText = aiCount;
     if(document.getElementById('countSW')) document.getElementById('countSW').innerText = swCount;
 
-    // --- ส่วนที่ 2: ระบบค้นหา ---
+    // --- 2. Search System (แก้ไขแล้ว) ---
     const searchInput = document.getElementById('softwareSearch');
     const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
     
     if (searchVal) {
         lib = lib.filter(item => 
             item.name.toLowerCase().includes(searchVal) || 
-            item.version.toLowerCase().includes(searchVal)
+            item.version.toLowerCase().includes(searchVal) ||
+            item.type.toLowerCase().includes(searchVal) // ✅ เพิ่มบรรทัดนี้: ให้ค้นหาจาก Type ได้ด้วย
         );
     }
 
-    // --- ส่วนที่ 3: วาดตาราง ---
+    // --- 3. Draw Table ---
     tbody.innerHTML = '';
 
     if (lib.length === 0) {
@@ -215,7 +142,7 @@ function saveSoftware() {
     const type = document.getElementById('editType').value;
     const expire = document.getElementById('editExpire').value;
 
-    if (!name || !version) return alert("กรุณากรอกชื่อและเวอร์ชันให้ครบถ้วน");
+    if (!name || !version) return alert("กรุณากรอกชื่อและแพ็กเกจให้ครบถ้วน");
 
     let lib = DB.getSoftwareLib();
     const data = { name, version, type, expire };

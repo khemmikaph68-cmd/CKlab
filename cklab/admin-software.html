@@ -100,38 +100,18 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-2">
-                            <i class="bi bi-clock-history fs-5"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold text-dark mb-0">จัดการรอบเวลาให้บริการ (AI Time Slots)</h6>
-                            <small class="text-muted">เปิด/ปิด รอบเวลาตามความสะดวกของผู้ดูแล</small>
-                        </div>
-                    </div>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="resetDefaultSlots()">
-                        <i class="bi bi-arrow-counterclockwise"></i> รีเซ็ตค่าเริ่มต้น
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div id="timeSlotContainer" class="row g-3">
-                        <div class="col-12 text-center text-muted py-3">กำลังโหลดข้อมูล...</div>
-                    </div>
-                </div>
-            </div>
             <div class="card table-card">
                 <div class="table-toolbar-header">
-                    <div class="toolbar-left">
-                        <div class="toolbar-title">
-                            <i class="bi bi-list-ul text-primary"></i> รายการในระบบ
+                    <div class="d-flex align-items-center gap-3" style="min-width: 300px;">
+                        <div class="toolbar-title fw-bold text-nowrap">
+                            <i class="bi bi-list-ul text-primary me-1"></i> รายการในระบบ
                         </div>
-                        <div class="search-box-pill">
+                        <div class="search-box-pill w-100">
                             <i class="bi bi-search"></i>
-                            <input type="text" id="softwareSearch" class="form-control" placeholder="ค้นหาชื่อ, เวอร์ชัน..." onkeyup="renderTable()">
+                            <input type="text" id="softwareSearch" class="form-control" placeholder="ค้นหาชื่อ, แพ็กเกจ..." onkeyup="renderTable()">
                         </div>
                     </div>
+                    
                     <button onclick="openModal()" class="btn btn-primary btn-add-custom">
                         <i class="bi bi-plus-lg"></i> เพิ่มรายการใหม่
                     </button>
@@ -143,7 +123,7 @@
                             <thead>
                                 <tr>
                                     <th class="ps-4" style="width: 40%;">ชื่อรายการ (Name)</th>
-                                    <th style="width: 25%;">เวอร์ชัน (Version)</th>
+                                    <th style="width: 25%;">แพ็กเกจ (Package)</th>
                                     <th style="width: 20%;">ประเภท (Type)</th>
                                     <th class="text-end pe-4" style="width: 15%;">จัดการ</th>
                                 </tr>
@@ -176,8 +156,8 @@
                                 <input type="text" id="editName" class="form-control" placeholder="เช่น ChatGPT" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">เวอร์ชัน</label>
-                                <input type="text" id="editVersion" class="form-control" placeholder="เช่น v4.0" required>
+                                <label class="form-label small fw-bold text-muted">แพ็กเกจ</label>
+                                <input type="text" id="editVersion" class="form-control" placeholder="เช่น Plus, Pro" required>
                             </div>
                         </div>
                         
