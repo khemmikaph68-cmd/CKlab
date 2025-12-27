@@ -544,23 +544,35 @@ function openCheckInModal(pc) {
 function getSlotEndTime() {
     const now = new Date();
     const cur = now.getHours() * 60 + now.getMinutes();
+    
+    // ดึงข้อมูลรอบเวลาทั้งหมด
     const allSlots = (DB.getAiTimeSlots && typeof DB.getAiTimeSlots === 'function') ? DB.getAiTimeSlots() : [];
-    const activeSlots = allSlots.filter(s => s.active);
+    
+    // ✅ แก้ไข: กรองเอาเฉพาะรอบที่ Active และ "ไม่ใช่รอบตลอดวัน"
+    // เพื่อให้ได้รอบย่อยที่ถูกต้อง (เช่น 09:00-10:30) ไม่ใช่รอบใหญ่ (09:00-16:30)
+    const activeSlots = allSlots.filter(s => s.active && !s.label.includes("ตลอดวัน"));
 
     if (activeSlots.length > 0) {
+        // หารอบที่เวลาปัจจุบัน "อยู่ตรงกลาง" หรือ "ใกล้จะเริ่ม" (ก่อน 15 นาที)
         const activeSlot = activeSlots.find(s => {
             const [sh, sm] = s.start.split(':').map(Number);
             const [eh, em] = s.end.split(':').map(Number);
+            
             const startMins = sh * 60 + sm;
             const endMins = eh * 60 + em;
+            
+            // เงื่อนไข: เวลาปัจจุบัน >= (เวลาเริ่ม - 15 นาที) AND เวลาปัจจุบัน < เวลาจบ
             return cur >= (startMins - 15) && cur < endMins;
         });
 
         if (activeSlot) {
             const [eh, em] = activeSlot.end.split(':').map(Number);
+            // คืนค่าเวลาจบเป็น "จำนวนนาทีจากเที่ยงคืน"
             return eh * 60 + em; 
         }
     }
+    
+    // ถ้าไม่ตรงกับรอบไหนเลย (เช่น พักเที่ยง หรือ เลิกงานแล้ว) คืนค่า null
     return null;
 }
 

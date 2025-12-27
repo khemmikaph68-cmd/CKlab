@@ -86,51 +86,67 @@ function updateTimer() {
     }
 }
 
-// --- Mode 2: นับถอยหลัง (Countdown) ---
+// --- Mode 2: นับถอยหลัง (Countdown ตามรอบ) ---
 function updateCountdownSlot() {
     const session = DB.getSession();
-    if (!session || !session.forceEndTime) return;
+    // ถ้าไม่มีเวลาบังคับจบ ให้สลับไปโหมดจับเวลาปกติ (กัน Error)
+    if (!session || !session.forceEndTime) {
+        setupUnlimitedMode();
+        return;
+    }
 
-    // คำนวณเวลาเป้าหมาย (forceEndTime เป็นนาทีจากเที่ยงคืน)
-    const endMinutesTotal = session.forceEndTime; 
-    const targetDate = new Date();
+    // 1. รับค่าเวลาจบ (จำนวนนาทีจากเที่ยงคืน) เช่น 10:30 = 630 นาที
+    const endMinutesTotal = parseInt(session.forceEndTime); 
+    
+    // 2. สร้างเวลาเป้าหมาย (Target) โดยใช้วันที่ "ปัจจุบัน" เสมอ
+    const now = new Date();
+    const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // เริ่มที่เที่ยงคืนวันนี้
+    
+    // บวกชั่วโมงและนาทีเข้าไป
     const targetHour = Math.floor(endMinutesTotal / 60);
     const targetMin = endMinutesTotal % 60;
     targetDate.setHours(targetHour, targetMin, 0, 0);
 
-    const now = new Date();
-    const diff = targetDate - now;
+    // 3. คำนวณส่วนต่าง (Milliseconds)
+    const diff = targetDate.getTime() - now.getTime();
 
     const timerDisplay = document.getElementById('timerDisplay');
 
+    // กรณีหมดเวลาแล้ว (Diff ติดลบ)
     if (diff <= 0) {
         if (timerInterval) clearInterval(timerInterval);
         if(timerDisplay) {
             timerDisplay.innerText = "00:00:00";
             timerDisplay.classList.add('text-danger', 'fw-bold');
+            timerDisplay.classList.remove('text-dark'); // เอาสีเดิมออก
         }
         
-        // 🚨 หมดเวลา -> ถามต่อเวลา
+        // หน่วงเวลาแป๊บหนึ่งก่อนเด้งเตือน (เพื่อให้เห็นเลข 00:00:00)
         setTimeout(() => {
             handleTimeUp();
         }, 500);
         return;
     }
 
+    // อัปเดตหน้าจอปกติ
     if (timerDisplay) {
         timerDisplay.innerText = formatTime(diff);
 
         // เตือนช่วง 5 นาทีสุดท้าย
         if (diff < 5 * 60 * 1000) { 
-            timerDisplay.style.color = '#dc3545'; 
-            showAlert('ใกล้หมดเวลาแล้ว! กรุณาเตรียมตัวบันทึกงาน หรือกด "ขอต่อเวลา"');
+            timerDisplay.classList.remove('text-dark');
+            timerDisplay.classList.add('text-danger');
             
-            // กระพริบถ้าน้อยกว่า 1 นาที
+            // แสดงข้อความเตือน
+            showAlert('⚠️ ใกล้หมดรอบเวลาแล้ว! กรุณาเตรียมตัว "ต่อเวลา"');
+            
+            // เอฟเฟกต์กระพริบถ้าน้อยกว่า 1 นาที
             if (diff < 60 * 1000) {
                 timerDisplay.style.opacity = (new Date().getMilliseconds() < 500) ? '1' : '0.5';
             }
         } else {
-            timerDisplay.style.color = ''; 
+            timerDisplay.classList.remove('text-danger');
+            timerDisplay.classList.add('text-dark'); // หรือสีขาวตาม Theme
             timerDisplay.style.opacity = '1';
             hideAlert();
         }
