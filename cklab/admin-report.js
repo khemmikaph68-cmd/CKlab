@@ -8,12 +8,156 @@ let lastLogCount = 0;
 
 // ✅ Pagination Variables
 let currentPage = 1;
-let rowsPerPage = 20;
+let rowsPerPage = 10;
 let filteredLogsGlobal = []; 
 
 // --- Master Lists ---
 const FACULTY_LIST = ["คณะวิทยาศาสตร์", "คณะเกษตรศาสตร์", "คณะวิศวกรรมศาสตร์", "คณะศิลปศาสตร์", "คณะเภสัชศาสตร์", "คณะบริหารศาสตร์", "คณะพยาบาลศาสตร์", "วิทยาลัยแพทยศาสตร์และการสาธารณสุข", "คณะศิลปประยุกต์และสถาปัตยกรรมศาสตร์", "คณะนิติศาสตร์", "คณะรัฐศาสตร์", "คณะศึกษาศาสตร์"];
-const ORG_LIST = ["สำนักคอมพิวเตอร์และเครือข่าย", "สำนักบริหารทรัพย์สินและสิทธิประโยชน์", "สำนักวิทยบริการ", "กองกลาง", "กองแผนงาน", "กองคลัง", "กองบริการการศึกษา", "กองการเจ้าหน้าที่", "สำนักงานส่งเสริมและบริหารงานวิจัย ฯ", "สำนักงานพัฒนานักศึกษา", "สำนักงานบริหารกายภาพและสิ่งแวดล้อม", "สำนักงานวิเทศสัมพันธ์", "สำนักงานกฏหมายและนิติการ", "สำนักงานตรวจสอบภายใน", "สำนักงานรักษาความปลอดภัย", "สภาอาจารย์", "สหกรณ์ออมทรัพย์มหาวิทยาลัยอุบลราชธานี", "อุทยานวิทยาศาสตร์มหาวิทยาลัยอุบลราชธานี", "ศูนย์การจัดการความรู้ (KM)", "ศูนย์การเรียนรู้และพัฒนา \"งา\" เชิงเกษตรอุตสาหกรรมครัวเรือนแบบยั่งยืน", "สถานปฏิบัติการโรงแรมฯ (U-Place)", "ศูนย์วิจัยสังคมอนุภาคลุ่มน้ำโขง ฯ", "ศูนย์เครื่องมือวิทยาศาสตร์", "โรงพิมพ์มหาวิทยาลัยอุบลราชธานี"];
+const ORG_LIST = ["สำนักคอมพิวเตอร์และเครือข่าย", "สำนักบริหารทรัพย์สินและสิทธิประโยชน์", "สำนักวิทยบริการ", "กองกลาง", "กองแผนงาน", "กองคลัง", "กองบริการการศึกษา", "กองการเจ้าหน้าที่", "สำนักงานส่งเสริมและบริหารงานวิจัย ฯ", "สำนักงานพัฒนานักศึกษา", "สำนักงานบริหารกายภาพและสิ่งแวดล้อม", "สำนักงานวิเทศสัมพันธ์", "สำนักงานนิติการ / สำนักงานกฎหมาย", "สำนักงานตรวจสอบภายใน", "สำนักงานรักษาความปลอดภัย", "สภาอาจารย์", "สหกรณ์ออมทรัพย์มหาวิทยาลัยอุบลราชธานี", "อุทยานวิทยาศาสตร์มหาวิทยาลัยอุบลราชธานี", "ศูนย์การจัดการความรู้ (KM)", "ศูนย์การเรียนรู้และพัฒนา \"งา\" เชิงเกษตรอุตสาหกรรมครัวเรือนแบบยั่งยืน", "สถานปฏิบัติการโรงแรมฯ (U-Place)", "ศูนย์วิจัยสังคมอนุภาคลุ่มน้ำโขง ฯ", "ศูนย์เครื่องมือวิทยาศาสตร์", "โรงพิมพ์มหาวิทยาลัยอุบลราชธานี"];
+
+// --- ตัวแปรสำหรับเก็บ Instance ของกราฟใหม่ ---
+let distributionBarInstance = null;
+let dailyTrendLineInstance = null;
+
+// ✅ ฟังก์ชันวาดกราฟแท่ง 2.1 (แกน Y อยู่ที่เดิม + แท่งรวมกลุ่มตรงกลาง)
+function drawDistributionBarChart(data) {
+    const ctx = document.getElementById('distributionBarChart');
+    if (!ctx) return;
+    if (distributionBarInstance) distributionBarInstance.destroy();
+
+    const customOrder = { "นักศึกษา": 1, "บุคลากร": 2, "บุคคลภายนอก": 3 };
+    
+    const sortedData = Object.entries(data).sort((a, b) => {
+        const orderA = customOrder[a[0]] || 99; // ถ้าไม่ใช่ 3 กลุ่มนี้ให้ไปอยู่ท้ายสุด
+        const orderB = customOrder[b[0]] || 99;
+        
+        if (orderA !== orderB) {
+            return orderA - orderB; // เรียงตาม 1, 2, 3
+        }
+        return b[1] - a[1]; // กรณีเป็นโหมดอื่น (เช่น รายคณะ) ให้เรียงตามจำนวนเหมือนเดิม
+    });
+    // --------------------------------------
+
+    distributionBarInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sortedData.map(x => x[0]),
+            datasets: [{
+                label: 'จำนวนครั้ง',
+                data: sortedData.map(x => Math.floor(x[1])),
+                backgroundColor: '#1d73f2',
+                borderRadius: 4,
+                
+                // คงค่าเหล่านี้ไว้ตามเดิมเพื่อขนาดแท่งที่สวยงาม
+                categoryPercentage: 0.3, 
+                barPercentage: 0.5,
+                maxBarThickness: 35
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    // แกน Y จะอยู่ชิดซ้ายสุดตามปกติ
+                    ticks: { 
+                        stepSize: 1, 
+                        precision: 0,
+                        font: { family: "'Prompt', sans-serif" }
+                    },
+                    grid: {
+                        color: '#f0f0f0',
+                        drawBorder: true // แสดงเส้นขอบแกน Y
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { 
+                        font: { family: "'Prompt', sans-serif", size: 12 },
+                        color: '#666'
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    bodyFont: { family: "'Prompt', sans-serif" }
+                }
+            }
+        }
+    });
+}
+
+function drawDailyTrendLineChart(dailyData, timeMode) {
+    const ctx = document.getElementById('dailyTrendLineChart');
+    if (!ctx) return;
+    if (dailyTrendLineInstance) dailyTrendLineInstance.destroy();
+
+    let labels = [];
+    let dataPoints = [];
+
+    if (timeMode === 'yearly') {
+        labels = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        dataPoints = labels.map(month => dailyData[month] || 0);
+    } 
+    else if (timeMode === 'daily' || timeMode === 'monthly') {
+        let startD, endD;
+
+        if (timeMode === 'daily') {
+            startD = new Date(document.getElementById('dateStart').value);
+            endD = new Date(document.getElementById('dateEnd').value);
+        } else {
+            // โหมด Monthly: หาตั้งแต่วันที่ 1 ของเดือนเริ่ม จนถึงวันสุดท้ายของเดือนจบ
+            const mStartVal = document.getElementById('monthStart').value;
+            const mEndVal = document.getElementById('monthEnd').value;
+            startD = new Date(mStartVal + "-01");
+            const parts = mEndVal.split('-');
+            endD = new Date(parts[0], parts[1], 0);
+        }
+
+        if (startD && endD && !isNaN(startD) && !isNaN(endD)) {
+            let curr = new Date(startD);
+            while (curr <= endD) {
+                const dateStr = curr.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+                labels.push(dateStr);
+                dataPoints.push(dailyData[dateStr] || 0);
+                curr.setDate(curr.getDate() + 1);
+            }
+        }
+    } 
+    else {
+        labels = Object.keys(dailyData);
+        dataPoints = labels.map(d => dailyData[d]);
+    }
+
+    dailyTrendLineInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'จำนวนครั้งการใช้งาน',
+                data: dataPoints,
+                borderColor: '#1d73f2',
+                backgroundColor: 'rgba(29, 115, 242, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0,
+                pointBackgroundColor: '#1d73f2',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { grid: { display: true, color: '#f0f0f0' }, ticks: { font: { family: "'Prompt', sans-serif", size: 10 } } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -146,109 +290,160 @@ function generateReport() {
     applyFilters(); 
 }
 
-function applyFilters() { 
-    // console.log("Applying filters...");
-    const logs = allLogs;
-    const userModeEl = document.querySelector('input[name="userTypeOption"]:checked');
-    const userMode = userModeEl ? userModeEl.value : 'all'; 
-    const timeMode = document.getElementById('timeFilterType').value;
+/* admin-report.js - แก้ไขลอจิก applyFilters ตามความต้องการของผู้ใช้ */
 
+// admin-report.js
+
+function applyFilters() { 
+    // 1. ดึงข้อมูล Log ทั้งหมดที่สิ้นสุดการใช้งานแล้ว
+    const allStatsLogs = allLogs.filter(l => l.action === 'END_SESSION');
+
+    // 2. ดึงค่าตัวคัดกรองจากหน้าจอ
+    const userModeEl = document.querySelector('input[name="userTypeOption"]:checked');
+    const userMode = userModeEl ? userModeEl.value : 'all';
+    const timeMode = document.getElementById('timeFilterType').value;
     const selectedFaculties = getCheckedValues('studentFacultyList');
     const selectedOrgs = getCheckedValues('staffOrgList');
 
-    let filteredLogs = logs.filter(log => {
-        // 1. Time Filter
+    // 3. กรองข้อมูลตามเงื่อนไข
+    let filteredLogs = allStatsLogs.filter(log => {
         const logDate = new Date(log.startTime || log.timestamp);
+        const logFaculty = (log.userFaculty || "").trim();
+
+        // กรองตามเวลา (Daily / Monthly)
         if (timeMode === 'daily') {
             const start = new Date(document.getElementById('dateStart').value);
             const end = new Date(document.getElementById('dateEnd').value);
-            start.setHours(0,0,0,0); end.setHours(23,59,59,999);
-            return logDate >= start && logDate <= end;
-        } 
-        else if (timeMode === 'monthly') {
-            const sVal = document.getElementById('monthStart').value;
-            const eVal = document.getElementById('monthEnd').value;
-            if (!sVal || !eVal) return false;
-            const logMonth = logDate.toISOString().slice(0, 7);
-            return logMonth >= sVal && logMonth <= eVal;
-        } 
-        else if (timeMode === 'yearly') {
-            const sYear = parseInt(document.getElementById('yearStart').value);
-            const eYear = parseInt(document.getElementById('yearEnd').value);
-            const logYear = logDate.getFullYear();
-            return logYear >= sYear && logYear <= eYear;
+            if (!isNaN(start) && !isNaN(end)) {
+                start.setHours(0,0,0,0); end.setHours(23,59,59,999);
+                if (logDate < start || logDate > end) return false;
+            }
+        } else if (timeMode === 'monthly') {
+            const mStart = new Date(document.getElementById('monthStart').value + "-01");
+            const mEndInput = document.getElementById('monthEnd').value;
+            const mEndParts = mEndInput.split('-');
+            const mEnd = new Date(mEndParts[0], mEndParts[1], 0, 23, 59, 59);
+            if (logDate < mStart || logDate > mEnd) return false;
+        // ค้นหาส่วนการกรองเวลาในฟังก์ชัน applyFilters และเพิ่มเงื่อนไข yearly ต่อจากรายเดือน
+        } else if (timeMode === 'yearly') {
+            const yStart = parseInt(document.getElementById('yearStart').value);
+            const yEnd = parseInt(document.getElementById('yearEnd').value);
+            const logYear = logDate.getFullYear(); // ดึงปี ค.ศ. จากข้อมูล Log
+            
+            // ตรวจสอบว่าปีใน Log อยู่ในช่วงที่เลือกหรือไม่
+            if (logYear < yStart || logYear > yEnd) return false;
         }
+
+        const role = (log.userRole || '').toLowerCase();
+        
+        // ✅ [LOGIC แก้ไข] การกรองข้อมูลนักศึกษา
+        if (userMode === 'student') {
+            if (role !== 'student') return false;
+            
+            // ตรวจสอบคณะ
+            const isFacultyMatch = selectedFaculties.some(fac => fac.trim() === logFaculty);
+            if (!isFacultyMatch) return false;
+
+            // ตรวจสอบ ระดับการศึกษา / ชั้นปี
+            const combinedValue = document.getElementById('combinedYearLevel').value;
+            const userLevel = (log.userLevel || "").toString().trim();
+            const userYear = (log.userYear || "").toString().trim(); // ค่าจาก DB เช่น "5"
+
+            if (combinedValue !== 'all') {
+                if (combinedValue === 'undergrad_all') {
+                    // กรณีเลือก ปริญญาตรี (ทั้งหมด) -> เอาทุกชั้นปีที่เป็น ป.ตรี
+                    if (userLevel !== 'ปริญญาตรี') return false;
+                } 
+                else if (combinedValue === 'ปริญญาโท' || combinedValue === 'ปริญญาเอก') {
+                    if (userLevel !== combinedValue) return false;
+                } 
+                else if (combinedValue === '5+') {
+                    // ✅ แก้ไขจุดนี้: ถ้าเลือก 5+ ให้เช็คว่าเป็น ป.ตรี และ ปีตั้งแต่ 5 ขึ้นไป
+                    const yNum = parseInt(userYear);
+                    if (userLevel !== 'ปริญญาตรี' || isNaN(yNum) || yNum < 5) return false;
+                } 
+                else {
+                    // กรณีเลือกปี 1, 2, 3, 4
+                    if (userLevel !== 'ปริญญาตรี' || userYear !== combinedValue) return false;
+                }
+            }
+        } 
+        // ค้นหาเงื่อนไขการกรองของ staff ในฟังก์ชัน applyFilters
+        else if (userMode === 'staff') {
+            if (role !== 'staff' && role !== 'admin') return false;
+
+            const currentLogFaculty = (log.userFaculty || "").replace(/["\\]/g, "").trim();
+
+            return selectedOrgs.some(org => {
+                const selectedOrgClean = org.replace(/["\\]/g, "").trim();
+                
+                // แก้ไขจากการใช้ === เป็นการใช้ .includes() เพื่อลดปัญหาเรื่องเครื่องหมายพิเศษ
+                return currentLogFaculty.includes(selectedOrgClean) || selectedOrgClean.includes(currentLogFaculty);
+            });
+        }
+        else if (userMode === 'external') {
+            if (role !== 'external') return false;
+        }
+        
         return true;
     });
 
-    filteredLogs = filteredLogs.filter(log => {
-        // 2. User Type & Faculty Filter
-        const role = (log.userRole || '').toLowerCase();
-        
-        if (userMode === 'all') return true; 
-        
-        if (userMode === 'student') {
-            if (role !== 'student') return false;
-            // ✅ กรองคณะเฉพาะเมื่อเลือกโหมดนักศึกษา
-            if (selectedFaculties.length > 0 && !selectedFaculties.includes(log.userFaculty)) return false;
-            
-            const level = document.getElementById('filterEduLevel').value;
-            if (level !== 'all' && log.userLevel !== level) return false;
-            
-            const year = document.getElementById('filterYear').value;
-            if (year !== 'all') {
-                if (year === '5+' && parseInt(log.userYear) < 5) return false;
-                if (year !== '5+' && log.userYear !== year) return false;
-            }
-            return true;
-        } 
-        
-        if (userMode === 'staff') {
-            if (role !== 'staff' && role !== 'admin') return false;
-            // ✅ กรองหน่วยงานเฉพาะเมื่อเลือกโหมดบุคลากร
-            if (selectedOrgs.length > 0 && !selectedOrgs.includes(log.userFaculty)) return false;
-            return true;
-        } 
-        
-        if (userMode === 'external') {
-            return role === 'external' || role === 'guest';
+    // 4. เตรียมข้อมูลกราฟ
+    let distributionData = {};
+    const timeChartData = {};
+
+    filteredLogs.forEach(l => {
+        // กราฟ 2.1: แยกกลุ่มผู้ใช้ (คง นักศึกษา/บุคลากร/ภายนอก ไว้)
+        let distLabel = l.userFaculty || 'ไม่ระบุ';
+        if (userMode === 'all') {
+            if (l.userRole === 'student') distLabel = "นักศึกษา";
+            else if (l.userRole === 'staff' || l.userRole === 'admin') distLabel = "บุคลากร";
+            else distLabel = "บุคคลภายนอก";
         }
-        return false;
+        distributionData[distLabel] = (distributionData[distLabel] || 0) + 1;
+
+        // กราฟ 2.2: กำหนด Label แกน X (โหมด Monthly ใช้รายวันเหมือน Daily)
+        const dateObj = new Date(l.startTime || l.timestamp);
+        let timeLabel;
+        if (timeMode === 'daily' || timeMode === 'monthly') {
+            timeLabel = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+        } else if (timeMode === 'yearly') {
+            timeLabel = dateObj.toLocaleDateString('th-TH', { month: 'long' });
+        }
+        timeChartData[timeLabel] = (timeChartData[timeLabel] || 0) + 1;
     });
 
-    // แยกข้อมูลสำหรับ Chart และ Table
-    const statsLogs = filteredLogs.filter(l => l.action === 'END_SESSION');
+    // 5. อัปเดตส่วนต่าง ๆ
+    updateSummaryCards(filteredLogs);
+    drawDistributionBarChart(distributionData);
+    drawDailyTrendLineChart(timeChartData, timeMode);
+
+    const globalChartData = processLogsForCharts(filteredLogs, timeMode);
+    if (topSoftwareChartInstance) topSoftwareChartInstance.destroy();
+    topSoftwareChartInstance = drawTopSoftwareChart(globalChartData.softwareStats);
     
-    updateSummaryCards(statsLogs);
+    if (pieChartInstance) pieChartInstance.destroy();
+    pieChartInstance = drawAIUsagePieChart(globalChartData.aiUsageData);
     
-    // Process Data
-    const data = processLogsForCharts(statsLogs, timeMode);
-    
-    // Draw Charts (ใช้ try-catch ป้องกัน error)
-    try {
-        monthlyFacultyChartInstance = drawBeautifulLineChart(data.monthlyFacultyData, 'monthlyFacultyChart', 5, timeMode);
-        monthlyOrgChartInstance = drawBeautifulLineChart(data.monthlyOrgData, 'monthlyOrgChart', 5, timeMode);
-        topSoftwareChartInstance = drawTopSoftwareChart(data.softwareStats);
-        pieChartInstance = drawAIUsagePieChart(data.aiUsageData); 
-        pcAvgChartInstance = drawPCAvgTimeChart(data.pcAvgTimeData);
-        drawSatisfactionChart(data.satisfactionData);
-    } catch (e) { console.error("Chart Error:", e); }
-    
-    // Render Table & Comments
-    try {
-        renderFeedbackComments(filteredLogs); 
-        renderLogHistory(filteredLogs); // ✅ ส่งข้อมูลที่กรองแล้วไปวาดตาราง
-    } catch (e) { console.error("Table Error:", e); }
+    drawSatisfactionChart(globalChartData.satisfactionData);
+    renderFeedbackComments(filteredLogs);
+    renderLogHistory(filteredLogs);
 }
 
 function updateSummaryCards(data) {
-    const sessionCount = data.length;
+    // นับจำนวนคนจริงๆ แบบไม่ซ้ำรหัส (จะออกมาเป็น 14 คนสำหรับนักศึกษา)
     const uniqueUsers = new Set(data.map(log => log.userId)).size;
+
+    // นับจำนวนครั้งที่ทำรายการสำเร็จ (Sessions)
+    const sessionCount = data.length;
+
+    // คำนวณเวลารวม
     let totalMinutes = 0;
-    data.forEach(log => { totalMinutes += (log.durationMinutes || 60); });
+    data.forEach(log => { totalMinutes += (log.durationMinutes || 0); });
     const totalHours = (totalMinutes / 60).toFixed(1);
 
-    animateValue("resultUserCount", 0, uniqueUsers, 500);
+    // แสดงผล
+    animateValue("resultUserCount", 0, uniqueUsers, 500); 
     animateValue("resultSessionCount", 0, sessionCount, 500);
     animateValue("resultTotalHours", 0, parseFloat(totalHours), 500);
 }
@@ -572,9 +767,12 @@ function renderLogHistory(logs) {
                 <td class="text-center">${dateStr}</td>
                 <td class="text-center"><span class="badge bg-light text-dark border">${timeRangeStr}</span></td>
                 <td>${log.userFaculty || '-'}</td>
+                <td class="text-center"> ${log.userRole === 'student' ? 
+                        `<span class="badge bg-info bg-opacity-10 text-info border border-info px-2" style="font-size: 0.75rem;">ปี ${log.userYear || 'N/A'}</span>` 
+                        : '-'}
+                </td>
                 <td class="text-center">${roleBadge}</td>
                 <td class="text-center"><span class="badge bg-dark bg-opacity-75">PC-${log.pcId}</span></td>
-                <td class="text-center">${log.durationMinutes ? log.durationMinutes.toFixed(0) + ' น.' : '-'}</td>
                 <td class="text-center">${score}</td>
             </tr>
         `;

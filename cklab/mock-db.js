@@ -99,10 +99,10 @@ const DEFAULT_GENERAL_CONFIG = {
 
 // 1.7 จำลอง External System: REG API
 const MOCK_REG_DB = {
-    "66123456": { prefix: "นาย", name: "สมชาย รักเรียน", faculty: "วิศวกรรมศาสตร์", department: "คอมพิวเตอร์", year: "3", level: "ปริญญาตรี", role: "student" },
-    "66112233": { prefix: "นางสาว", name: "มานี มีปัญญา", faculty: "วิทยาศาสตร์", department: "วิทยาการคอมพิวเตอร์", year: "2", level: "ปริญญาตรี", role: "student" },
-    "66100000": { prefix: "นาย", name: "เอกภพ มั่นคง", faculty: "มนุษยศาสตร์", department: "ภาษาไทย", year: "4", level: "ปริญญาตรี", role: "student" },
-    "66100001": { prefix: "นางสาว", name: "ดวงดาว ไกลโพ้น", faculty: "ศึกษาศาสตร์", department: "คณิตศาสตร์", year: "1", level: "ปริญญาตรี", role: "student" },
+    "66123456": { prefix: "นาย", name: "สมชาย รักเรียน", faculty: "คณะวิศวกรรมศาสตร์", department: "คอมพิวเตอร์", year: "3", level: "ปริญญาตรี", role: "student" },
+    "66112233": { prefix: "นางสาว", name: "มานี มีปัญญา", faculty: "คณะวิทยาศาสตร์", department: "วิทยาการคอมพิวเตอร์", year: "2", level: "ปริญญาตรี", role: "student" },
+    "66100000": { prefix: "นาย", name: "เอกภพ มั่นคง", faculty: "คณะศิลปศาสตร์", department: "ภาษาไทย", year: "4", level: "ปริญญาตรี", role: "student" },
+    "66100001": { prefix: "นางสาว", name: "ดวงดาว ไกลโพ้น", faculty: "คณะศึกษาศาสตร์", department: "คณิตศาสตร์", year: "1", level: "ปริญญาตรี", role: "student" },
     "67200000": { prefix: "นาย", name: "ผู้มาเยือน", faculty: "บุคคลภายนอก", department: "-", year: "-", level: "บุคคลทั่วไป", role: "external" },
     "ubu_staff": { prefix: "ดร.", name: "ใจดี มีวิชา", faculty: "สำนักคอมพิวเตอร์และเครือข่าย", department: "-", year: "-", level: "บุคลากร", role: "staff" },
     "staff_karnklang": { prefix: "นาย", name: "บุคลากร กองกลาง", faculty: "กองกลาง", year: "-", level: "บุคลากร", role: "staff" },
@@ -129,17 +129,17 @@ const MOCK_REG_DB = {
     "staff_physical": { prefix: "ช่าง", name: "กายภาพ สิ่งแวดล้อม", faculty: "สำนักงานบริหารกายภาพและสิ่งแวดล้อม", year: "-", level: "บุคลากร", role: "staff" },
     "staff_std_dev": { prefix: "พี่", name: "พัฒน์ นักศึกษา", faculty: "สำนักงานพัฒนานักศึกษา", year: "-", level: "บุคลากร", role: "staff" },
     "staff_inter": { prefix: "Ms.", name: "Inter Relations", faculty: "สำนักงานวิเทศสัมพันธ์", year: "-", level: "บุคลากร", role: "staff" },
-    "staff_research": { prefix: "ดร.", name: "วิจัย ก้าวหน้า", faculty: "สำนักงานส่งเสริมและบริหารงานวิจัย", year: "-", level: "บุคลากร", role: "staff" },
+    "staff_research": { prefix: "ดร.", name: "วิจัย ก้าวหน้า", faculty: "สำนักงานส่งเสริมและบริหารงานวิจัย ฯ", year: "-", level: "บุคลากร", role: "staff" },
     "staff_security": { prefix: "รปภ.", name: "ปลอดภัย หายห่วง", faculty: "สำนักงานรักษาความปลอดภัย", year: "-", level: "บุคลากร", role: "staff" },
     "staff_coop": { prefix: "จนท.", name: "ออมทรัพย์ มั่นคง", faculty: "สหกรณ์ออมทรัพย์มหาวิทยาลัยอุบลราชธานี", year: "-", level: "บุคลากร", role: "staff" },
     "staff_km": { prefix: "นักวิชาการ", name: "เรียนรู้ เคเอ็ม", faculty: "ศูนย์การจัดการความรู้ (KM)", year: "-", level: "บุคลากร", role: "staff" },
-    "staff_sesame": { prefix: "ป้า", name: "งา ยั่งยืน", faculty: "ศูนย์การเรียนรู้และพัฒนา \"งา\" เชิงเกษตรอุตสาหกรรมครัวเรือนแบบยั่งยืน", year: "-", level: "บุคลากร", role: "staff" },
     "staff_sci_tool": { prefix: "ดร.", name: "เครื่องมือ วิทย์", faculty: "ศูนย์เครื่องมือวิทยาศาสตร์", year: "-", level: "บุคลากร", role: "staff" },
-    "staff_mekong": { prefix: "นักวิจัย", name: "ลุ่มน้ำ โขง", faculty: "ศูนย์วิจัยสังคมอนุภาคลุ่มน้ำโขง", year: "-", level: "บุคลากร", role: "staff" },
+    "staff_mekong": { prefix: "นักวิจัย", name: "ลุ่มน้ำ โขง", faculty: "ศูนย์วิจัยสังคมอนุภาคลุ่มน้ำโขง ฯ", year: "-", level: "บุคลากร", role: "staff" },
     "staff_com_center": { prefix: "admin", name: "คอมพิวเตอร์ เครือข่าย", faculty: "สำนักคอมพิวเตอร์และเครือข่าย", year: "-", level: "บุคลากร", role: "staff" },
     "staff_asset": { prefix: "ผอ.", name: "ทรัพย์สิน ประโยชน์", faculty: "สำนักบริหารทรัพย์สินและสิทธิประโยชน์", year: "-", level: "บุคลากร", role: "staff" },
     "staff_library": { prefix: "บรรณารักษ์", name: "วิทย บริการ", faculty: "สำนักวิทยบริการ", year: "-", level: "บุคลากร", role: "staff" },
     "staff_scipark": { prefix: "CEO", name: "อุทยาน วิทย์", faculty: "อุทยานวิทยาศาสตร์มหาวิทยาลัยอุบลราชธานี", year: "-", level: "บุคลากร", role: "staff" },
+    "staff_sesame": { prefix: "ป้า", name: "งา ยั่งยืน", faculty: "ศูนย์การเรียนรู้และพัฒนา \"งา\" เชิงเกษตรอุตสาหกรรมครัวเรือนแบบยั่งยืน", year: "-", level: "บุคลากร", role: "staff" },
     "staff_print": { prefix: "ช่าง", name: "โรงพิมพ์ ม.อุบล", faculty: "โรงพิมพ์มหาวิทยาลัยอุบลราชธานี", year: "-", level: "บุคลากร", role: "staff" }
 };
 

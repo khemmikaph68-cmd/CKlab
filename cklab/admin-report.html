@@ -180,31 +180,27 @@
                     <div id="filter-student-section" class="filter-section bg-light p-3 rounded mb-4 d-none">
                         <h6 class="fw-bold text-primary mb-3">ตัวกรองข้อมูลนักศึกษา</h6>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">คณะ / สังกัด</label>
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold">คณะ</label>
                                 <div id="studentFacultyList" class="scrollable-checkbox-list"></div>
                                 <div class="mt-1 text-end">
                                     <small class="text-primary cursor-pointer fw-bold" onclick="toggleCheckAll('studentFacultyList')">เลือกทั้งหมด / ล้าง</small>
                                 </div>
                             </div>
+                            
                             <div class="col-md-3">
-                                <label class="form-label small fw-bold">ระดับ</label>
-                                <select id="filterEduLevel" class="form-select">
-                                    <option value="all">ทั้งหมด</option>
-                                    <option value="ปริญญาตรี">ปริญญาตรี</option>
-                                    <option value="ปริญญาโท">ปริญญาโท</option>
-                                    <option value="ปริญญาเอก">ปริญญาเอก</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">ชั้นปี</label>
-                                <select id="filterYear" class="form-select">
-                                    <option value="all">ทั้งหมด</option>
-                                    <option value="1">ปี 1</option>
-                                    <option value="2">ปี 2</option>
-                                    <option value="3">ปี 3</option>
-                                    <option value="4">ปี 4</option>
-                                    <option value="5+">ปี 5+</option>
+                                <label class="form-label small fw-bold">ระดับการศึกษา / ชั้นปี</label>
+                                <select id="combinedYearLevel" class="form-select">
+                                    <option value="all">-- ทั้งหมด --</option>
+                                        <option value="1">ชั้นปีที่ 1</option>
+                                        <option value="2">ชั้นปีที่ 2</option>
+                                        <option value="3">ชั้นปีที่ 3</option>
+                                        <option value="4">ชั้นปีที่ 4</option>
+                                        <option value="5+">ชั้นปีที่ 5+</option>
+                                        <option value="undergrad_all">ปริญญาตรี</option>
+                                        <option value="ปริญญาโท">ปริญญาโท</option>
+                                        <option value="ปริญญาเอก">ปริญญาเอก</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
@@ -300,20 +296,26 @@
                 </div>
             </div>
 
-            <div class="row g-4">
+            <div class="row g-4 mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm p-3">
-                        <h6 class="fw-bold text-dark mb-3" id="chartTitle1">1.1 สถิติผู้ใช้งานรายเดือน (คณะ/วิทยาลัย)</h6>
-                        <div class="bg-light p-3 rounded" style="height: 400px;"><canvas id="monthlyFacultyChart"></canvas></div>
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-bar-chart-fill me-2"></i> การกระจายตัวตามกลุ่มผู้ใช้</h6>
+                        <div class="bg-light p-3 rounded" style="height: 350px;">
+                            <canvas id="distributionBarChart"></canvas>
+                        </div>
                     </div>
                 </div>
                 <div class="col-12">
                     <div class="card border-0 shadow-sm p-3">
-                        <h6 class="fw-bold text-dark mb-3" id="chartTitle2">1.2 สถิติผู้ใช้งานรายเดือน (หน่วยงาน/อื่นๆ)</h6>
-                        <div class="bg-light p-3 rounded" style="height: 400px;"><canvas id="monthlyOrgChart"></canvas></div>
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-graph-up me-2"></i> แนวโน้มผู้เข้าใช้งานทั้งหมด</h6>
+                        <div class="bg-light p-3 rounded" style="height: 350px;">
+                            <canvas id="dailyTrendLineChart"></canvas>
+                        </div>
                     </div>
                 </div>
+            </div>
 
+            <div class="row g-4 mb-4">
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm p-3 h-100">
                         <h6 class="fw-bold text-dark mb-3">🏆 10 อันดับ Software/AI ยอดนิยม</h6>
@@ -322,22 +324,20 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm p-3 h-100">
-                        <h6 class="fw-bold text-dark mb-3">2. ใช้งาน AI vs ใช้งานทั่วไป</h6>
+                        <h6 class="fw-bold text-dark mb-3"> ใช้งาน AI vs ใช้งานทั่วไป</h6>
                         <div class="d-flex justify-content-center" style="max-height: 300px;">
                             <canvas id="aiUsagePieChart"></canvas>
                         </div>
                     </div>
                 </div>
-
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm p-3 h-100">
-                        <h6 class="fw-bold text-dark mb-3">3. คะแนนความพึงพอใจ (Satisfaction)</h6>
+                        <h6 class="fw-bold text-dark mb-3"> คะแนนความพึงพอใจ (Satisfaction)</h6>
                         <div class="card-body p-0">
                             <div class="d-flex align-items-end mb-3">
-                                <h1 class="fw-bold text-warning mb-0 me-2" style="font-size: 3.5rem;" id="satisfactionAvgScore">0.0</h1>
+                                <h1 class="fw-bold text-warning mb-0 me-3" style="font-size: 3.5rem;" id="satisfactionAvgScore">0.0</h1>
                                 <div class="mb-2">
                                     <div class="text-warning fs-5" id="satisfactionStars"></div>
                                     <span class="text-muted small" id="satisfactionTotalCount">จาก 0 คน</span>
@@ -359,61 +359,38 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm p-3 h-100">
-                        <h6 class="fw-bold text-dark mb-3">4. เวลาใช้งานเฉลี่ย (Average Session)</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <div class="card bg-primary text-white p-3 h-100 border-0">
-                                    <div class="small opacity-75">TOP ACTIVE PC</div>
-                                    <h4 class="fw-bold mb-0 mt-2" id="statTopPC">-</h4>
-                                    <small id="statTopPCTime">-</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="card bg-info text-white p-3 h-100 border-0">
-                                    <div class="small opacity-75">AVG SESSION</div>
-                                    <h4 class="fw-bold mb-0 mt-2" id="statAvgTime">0 น.</h4>
-                                    <small>เฉลี่ยรวม</small>
-                                </div>
-                            </div>
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm p-3">
+                        <h6 class="fw-bold text-dark mb-3"> ประวัติการใช้งานโดยละเอียด (Log History)</h6>
+                        <div class="table-responsive rounded-3 border">
+                            <table class="table table-custom table-bordered align-middle mb-0 table-hover">
+                                <thead class="sticky-top shadow-sm bg-white">
+                                    <tr class="text-center">
+                                        <th>#</th>
+                                        <th>รหัสผู้ใช้</th>
+                                        <th>ชื่อ-สกุล</th>
+                                        <th>Software</th>
+                                        <th>วันที่</th>
+                                        <th>เวลา</th>
+                                        <th>คณะ/หน่วยงาน</th>
+                                        <th>ชั้นปี</th> <th>สถานะ</th>
+                                        <th>PC</th>
+                                        <th>คะแนน</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logHistoryTableBody" class="text-center"></tbody>
+                            </table>
                         </div>
-                        <div class="bg-light p-3 rounded flex-grow-1" style="min-height: 250px;">
-                            <canvas id="pcAvgTimeChart"></canvas>
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <div class="small text-muted" id="paginationInfo"></div>
+                            <nav aria-label="Log pagination"><ul class="pagination pagination-sm mb-0" id="paginationControls"></ul></nav>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="row g-4 mt-1">
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold text-dark mb-0">5. ประวัติการใช้งานโดยละเอียด (Log History)</h6>
-                        </div>
-                        
-                        <div class="table-responsive rounded-3 border">
-                            <table class="table table-custom table-bordered align-middle mb-0 table-hover text-nowrap">
-                                <thead class="sticky-top shadow-sm">
-                                    <tr>
-                                        <th width="5%">#</th>
-                                        <th>รหัสผู้ใช้งาน</th>
-                                        <th style="min-width: 200px;">ชื่อ-สกุล</th>
-                                        <th width="20%">Software</th>
-                                        <th>วันที่</th>
-                                        <th>เวลา (เข้า-ออก)</th>
-                                        <th>คณะ/สังกัด</th>
-                                        <th>สถานะ</th>
-                                        <th>PCที่ใช้</th>
-                                        <th>ระยะเวลา</th>
-                                        <th>ความพึงพอใจ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="logHistoryTableBody" class="bg-white">
-                                </tbody>
-                            </table>
-                        </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                             <div class="small text-muted" id="paginationInfo">แสดง 0 - 0 จาก 0 รายการ</div>

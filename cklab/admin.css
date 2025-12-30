@@ -426,3 +426,23 @@ body {
     top: 0;
     z-index: 1020;
 }
+
+/* ปรับแต่งตาราง Log History ให้พอดีหน้าจอ */
+#logHistoryTableBody td, 
+#logHistoryTableBody th {
+    font-size: 0.85rem; /* ย่อขนาดตัวอักษรลงเล็กน้อย */
+    padding: 8px 4px;   /* ลดช่องว่างในเซลล์ */
+    white-space: normal; /* อนุญาตให้ข้อความขึ้นบรรทัดใหม่ ไม่ให้ดันตารางกว้างออก */
+    word-break: break-word; /* ตัดคำที่ยาวเกินไป */
+}
+
+/* กำหนดความกว้างเฉพาะบางคอลัมน์ที่สำคัญ */
+.table-custom th:nth-child(1) { width: 40px; }  /* # */
+.table-custom th:nth-child(2) { width: 100px; } /* รหัสผู้ใช้ */
+.table-custom th:nth-child(4) { width: 150px; } /* Software */
+.table-custom th:nth-child(7) { width: 150px; } /* คณะ/สังกัด */
+
+/* ลบการบังคับ text-nowrap ออกจาก table wrapper */
+.table-responsive {
+    overflow-x: hidden; /* ปิดการเลื่อนซ้ายขวาถ้าไม่จำเป็น */
+}

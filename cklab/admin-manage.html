@@ -10,7 +10,6 @@
     <link href="admin.css" rel="stylesheet"> 
     
     <style>
-        /* CSS เสริมสำหรับการ์ดเลือก Software */
         .soft-card {
             cursor: pointer;
             transition: all 0.2s ease-in-out;
@@ -28,15 +27,24 @@
         .soft-card.active .text-muted {
             color: #0d6efd !important;
         }
-        .hidden-checkbox {
-            display: none;
+        
+        /* CSS สำหรับสถานะ Locked */
+        .soft-card.locked {
+            background-color: #f8f9fa;
+            opacity: 0.5;
+            pointer-events: none;
+            border-color: #e9ecef;
         }
+        .soft-card.locked .text-muted {
+            color: #adb5bd !important;
+        }
+        
+        .hidden-checkbox { display: none; }
     </style>
 </head>
 <body class="bg-light">
 
     <div class="d-flex">
-        
         <div id="sidebar-container">
             <a href="#" class="sidebar-brand"><i class="bi bi-shield-lock me-2"></i>Admin Panel</a>
             <nav class="mt-3">
@@ -73,7 +81,6 @@
                                     <th>ชื่อเครื่อง</th>
                                     <th>สถานะ</th> 
                                     <th>ประเภท</th>
-                                    <th>รอบเวลา</th>
                                     <th>Software / AI ที่ติดตั้ง</th>
                                     <th class="text-end pe-4">จัดการ</th>
                                 </tr>
@@ -83,7 +90,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -122,23 +128,13 @@
                         </div>
 
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <label class="form-label small fw-bold text-muted">ประเภทการใช้งาน (Type)</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-cpu"></i></span>
-                                    <select id="editPcType" class="form-select" onchange="toggleSoftwareRequire()">
+                                    <select id="editPcType" class="form-select" onchange="refreshCheckboxState()">
                                         <option value="General">💻 ใช้งานทั่วไป (General)</option>
                                         <option value="AI">🤖 AI Workstation (เฉพาะทาง)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">รอบเวลาที่เปิดให้ใช้ (Time Slot)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-clock"></i></span>
-                                    <select id="editPcTime" class="form-select">
-                                        <option value="AI-Standard">AI Standard (แบ่ง 4 รอบ/วัน)</option>
-                                        <option value="ตลอดวัน">General (ตลอดวัน)</option>
                                     </select>
                                 </div>
                             </div>
@@ -147,19 +143,18 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted mb-2" for="softwareCheckboxList">
                                 เลือก Software / AI ที่ติดตั้งในเครื่องนี้
-                                <span class="fw-normal text-muted fst-italic ms-2 small">(ดึงข้อมูลจาก Manage AI)</span>
+                                <span class="fw-normal text-muted fst-italic ms-2 small">(เลือกได้สูงสุด 1 รายการ)</span>
                             </label>
                             <div class="card bg-white border shadow-sm rounded-3">
                                 <div class="card-body p-2 custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
                                     <div id="softwareCheckboxList" class="row g-2">
-                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                             <button type="button" class="btn btn-light rounded-pill px-4 btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                            
                             <button type="button" onclick="savePC()" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm btn-sm">
                                 <i class="bi bi-save me-1"></i> บันทึกการเปลี่ยนแปลง
                             </button>

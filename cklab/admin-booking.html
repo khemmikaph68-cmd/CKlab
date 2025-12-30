@@ -32,7 +32,7 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 class="fw-bold text-primary mb-1">📅 Booking Management</h3>
-                    <p class="text-muted small mb-0">จัดการรายการจองเครื่องล่วงหน้า</p>
+                    <p class="text-muted small mb-0">ตารางการจองและตรวจสอบรอบว่าง</p>
                 </div>
                 
                 <div class="d-flex gap-2">
@@ -44,13 +44,13 @@
                         <i class="bi bi-plus-lg me-1"></i> เพิ่มการจองใหม่
                     </button>
                 </div>
-                </div>
+            </div>
 
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body py-3">
                     <div class="row g-3 align-items-center">
                         <div class="col-auto">
-                            <label class="fw-bold small text-muted"><i class="bi bi-funnel-fill me-1"></i>ตัวกรอง:</label>
+                            <label class="fw-bold small text-muted"><i class="bi bi-funnel-fill me-1"></i>ค้นหา/กรอง:</label>
                         </div>
                         <div class="col-auto">
                             <input type="date" id="bookingDateFilter" class="form-control form-control-sm" onchange="renderBookings()">
@@ -58,11 +58,10 @@
                         <div class="col-auto">
                             <select id="bookingStatusFilter" class="form-select form-select-sm" onchange="renderBookings()">
                                 <option value="all">-- ทุกสถานะ --</option>
-                                <option value="pending">⏳ รออนุมัติ (Pending)</option>
-                                <option value="approved">🟡 อนุมัติแล้ว (Approved)</option>
-                                <option value="completed">🟢 ใช้งานเสร็จสิ้น (Completed)</option>
-                                <option value="no_show">⚪ ไม่มาตามนัด (No Show)</option>
-                                <option value="rejected">❌ ยกเลิก (Rejected)</option>
+                                <option value="approved">🟡 จองแล้ว (Booked)</option>
+                                <option value="completed">🟢 ใช้งานเสร็จ (Completed)</option>
+                                <option value="no_show">⚪ ไม่มา (No Show)</option>
+                                <option value="rejected">❌ ยกเลิก (Cancelled)</option>
                             </select>
                         </div>
                     </div>
@@ -75,16 +74,17 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
                                 <tr>
-                                    <th class="ps-4">เวลา (Time)</th>
+                                    <th class="ps-4">วันที่ (Date)</th>
+                                    <th>เวลา (Time)</th>
                                     <th>ผู้จอง (User)</th>
                                     <th>เครื่อง (PC)</th>
-                                    <th width="30%">รายละเอียด (Note / Software)</th> 
+                                    <th width="25%">รายละเอียด (Note / Software)</th> 
                                     <th>สถานะ (Status)</th>
                                     <th class="text-end pe-4">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody id="bookingTableBody">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -104,8 +104,8 @@
                     <form onsubmit="event.preventDefault(); saveBooking();">
                         
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">ชื่อผู้จอง / รหัสนักศึกษา</label>
-                            <input type="text" id="bkUser" class="form-control" required placeholder="ระบุชื่อ หรือ รหัสนักศึกษา">
+                            <label class="form-label text-muted small fw-bold">ผู้จอง (UBU WIFI+ หรือ รหัสนักศึกษา)</label>
+                            <input type="text" id="bkUser" class="form-control" required placeholder="เช่น somchai.r หรือ 66123456">
                         </div>
 
                         <div class="row g-2 mb-3">
@@ -117,12 +117,10 @@
                             <div class="col-6">
                                 <label class="form-label text-muted small fw-bold">ค้นหาเครื่องจาก Software</label>
                                 <select id="bkSoftwareFilter" class="form-select form-select-sm text-primary border-primary bg-light mb-1" onchange="filterPCList()">
-                                    <option value="">-- ไม่ระบุ --</option>
+                                    <option value="">-- ไม่ระบุ (แสดงทั้งหมด) --</option>
                                     </select>
                             </div>
                         </div>
-
-                        
 
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">เลือกเครื่อง (PC)</label>
@@ -161,7 +159,7 @@
 
                         <div class="d-grid mt-4">
                             <button type="submit" class="btn btn-primary py-2 fw-bold shadow-sm">
-                                <i class="bi bi-save me-2"></i>บันทึกการจอง
+                                <i class="bi bi-save me-2"></i>ยืนยันการจองทันที
                             </button>
                         </div>
                     </form>
