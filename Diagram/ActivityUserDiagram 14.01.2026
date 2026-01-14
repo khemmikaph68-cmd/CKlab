@@ -1,0 +1,97 @@
+@startuml
+title Activity Diagram: CKLab User Flow (With Admin Checkout)
+
+' ตั้งค่าสีและฟอนต์
+skinparam activity {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  FontName Tahoma
+}
+
+skinparam swimlane {
+  TitleFontSize 14
+  BorderColor Black
+}
+
+' กำหนด Swimlanes
+|User (ผู้ใช้งาน)|
+|System (ระบบ)|
+|Admin (ผู้ดูแลระบบ)|
+
+|User (ผู้ใช้งาน)|
+start
+:เข้าสู่หน้าจอ Kiosk System;
+
+partition "1. Check-in Module (UC-01, UC-02)" {
+  :เลือกประเภทผู้ใช้งาน (Switch Tab);
+
+  if (ประเภทผู้ใช้งาน?) then (สมาชิก / Member)
+    
+    ' --- ใช้ Loop (Repeat) เพื่อวนกลับถ้ารหัสผิด ---
+    repeat
+      |User (ผู้ใช้งาน)|
+      :กรอกรหัส UBU WiFi+;
+      |System (ระบบ)|
+      :เรียก API ตรวจสอบ;
+    
+    ' ถ้ารหัสผิด (ไม่ถูกต้อง) ให้วนกลับขึ้นไปกรอกใหม่
+    repeat while (รหัสถูกต้อง?) is (ไม่ถูกต้อง)
+    -> ถูกต้อง;
+    
+    |User (ผู้ใช้งาน)|
+    :ยืนยันตัวตนสำเร็จ;
+
+  else (บุคคลทั่วไป / Guest)
+    |User (ผู้ใช้งาน)|
+    :เลือก Guest Login;
+  endif
+
+  :กดยืนยันการเข้าใช้งาน (Confirm);
+}
+
+|System (ระบบ)|
+:สร้าง Session การใช้งาน;
+:เปลี่ยนสถานะเครื่องเป็น\n"ไม่ว่าง (In Use)";
+:เริ่มจับเวลา (Start Timer);
+
+partition "2. Active Session Module (UC-04)" {
+  |User (ผู้ใช้งาน)|
+  :เข้าใช้งานเครื่องคอมพิวเตอร์;
+  :ดูเวลาที่ใช้ไป (View Timer);
+}
+
+' --- เพิ่มจุดตัดสินใจ: ใครเป็นคนกดออก? ---
+if (สิ้นสุดการใช้งานโดย?) then (ผู้ใช้กดออกเอง)
+  |User (ผู้ใช้งาน)|
+  :กดปุ่ม Logout / เลิกใช้งาน;
+  
+  partition "3. Check-out Module (UC-05)" {
+    |System (ระบบ)|
+    :หยุดเวลาและบันทึก Log;
+    :คืนสถานะเครื่องเป็น "ว่าง";
+    :เปลี่ยนหน้าไปแบบประเมิน;
+  }
+
+  partition "4. Feedback Module (UC-03)" {
+    |User (ผู้ใช้งาน)|
+    :ให้คะแนนและเสนอแนะ (Rate);
+    :กดบันทึก (Save);
+    |System (ระบบ)|
+    :บันทึก Feedback;
+  }
+
+else (ผู้ใช้ลืมล็อคเอ้าท์)
+  |Admin (ผู้ดูแลระบบ)|
+  :กดปุ่ม "เช็คเอ้าท์แทน"\n(Force Logout);
+  
+  |System (ระบบ)|
+  :หยุดเวลาและบันทึก Log;
+  :คืนสถานะเครื่องเป็น "ว่าง";
+  ' กรณี Admin เตะออก จะไม่เข้าสู่หน้าประเมิน
+endif
+
+|System (ระบบ)|
+:กลับสู่หน้าแรก (Home);
+
+stop
+@enduml

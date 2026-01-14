@@ -1,0 +1,179 @@
+@startuml
+title Activity Diagram: CKLab Admin Work Flow (Vertical Layout)
+' ลบบรรทัด direction ออก เพื่อให้เป็นแนวตั้งตามค่า Default
+
+' ตั้งค่าสีและฟอนต์
+skinparam activity {
+  BackgroundColor #E0F2F7
+  BorderColor #005662
+  FontName Tahoma
+}
+
+skinparam swimlane {
+  TitleFontSize 14
+  BorderColor Black
+}
+
+' กำหนด Swimlanes
+|Admin (ผู้ดูแลระบบ)|
+|System (ระบบ)|
+
+' --- 1. Login Phase (UC-06) ---
+|Admin (ผู้ดูแลระบบ)|
+start
+:เข้าสู่หน้าเว็บไซต์ Admin Login;
+
+partition "1. Login Module (UC-06)" {
+  repeat
+    :กรอก Username/Password;
+    |System (ระบบ)|
+    :ตรวจสอบสิทธิ์ (Verify Credentials);
+  
+  ' วนลูปจนกว่ารหัสจะถูก
+  repeat while (รหัสถูกต้อง?) is (ไม่ถูกต้อง)
+  -> ถูกต้อง;
+  
+  :สร้าง Admin Session;
+  :แสดงหน้า Dashboard หลัก;
+}
+
+' --- Main Work Loop ---
+|Admin (ผู้ดูแลระบบ)|
+repeat
+  :เลือกเมนูที่ต้องการทำงาน;
+  
+  switch (เมนูที่เลือก?)
+  
+  ' --- UC-07 & 08 Monitor ---
+  case ( Monitor / ตรวจสอบ )
+    partition "2. Real-time Monitor (UC-07, 08)" {
+      :ดูผังที่นั่งเรียลไทม์ (View Lab Monitor);
+      
+      if (ต้องการจัดการสถานะ?) then (Yes)
+        if (Action?) then (เช็คอินแทน)
+          :ระบุรหัสผู้ใช้;
+          :กด Admin Check-in;
+          |System (ระบบ)|
+          :อัปเดตสถานะ "ใช้งาน (In Use)";
+          
+        elseif (แจ้งซ่อม)
+          :เลือกเครื่องที่เสีย;
+          :กด Set Maintenance;
+          |System (ระบบ)|
+          :อัปเดตสถานะ "แจ้งซ่อม";
+          
+        elseif (สั่งตัดการใช้งาน)
+          :เลือกเครื่องที่ User ลืมออก;
+          :กด Force Logout;
+          |System (ระบบ)|
+          :เคลียร์สถานะ & บันทึก Log;
+        endif
+      endif
+    }
+
+  ' --- UC-10 Booking ---
+  case ( Booking / การจอง )
+    partition "3. Booking Mgmt (UC-10)" {
+      :ดูตารางการจอง (View Schedule);
+      
+      if (Action?) then (เพิ่มการจอง)
+        :ระบุวันเวลา;
+        |System (ระบบ)|
+        :ตรวจสอบว่าง (Check Availability);
+        |Admin (ผู้ดูแลระบบ)|
+        if (ว่าง?) then (Yes)
+          :เลือกเครื่อง & ยืนยัน;
+          |System (ระบบ)|
+          :บันทึกการจอง (Add Booking);
+        else (No)
+          :แจ้งเตือนเครื่องเต็ม;
+        endif
+        
+      elseif (นำเข้าข้อมูล)
+        :เลือกไฟล์ CSV;
+        :กด Import CSV;
+        |System (ระบบ)|
+        :ประมวลผลและบันทึกข้อมูล;
+        
+      elseif (ยกเลิกจอง)
+        :เลือกรายการ;
+        :กด Cancel Booking;
+        |System (ระบบ)|
+        :ลบการจองออกจากระบบ;
+      endif
+    }
+
+  ' --- UC-09 & 11 Assets ---
+  case ( Assets / จัดการข้อมูล )
+    partition "4. Config Assets (UC-09, 11)" {
+      if (จัดการอะไร?) then (Software - UC-11)
+        :ดูรายการซอฟต์แวร์ (View List);
+        if (Action?) then (ค้นหา)
+          :Search Software;
+        else (เพิ่ม/แก้ไข)
+          :Add / Edit Software;
+          |System (ระบบ)|
+          :Save Software Data;
+        endif
+        
+      else (PC - UC-09)
+        :ดูรายการเครื่อง (View List);
+        :Add / Edit PC;
+        :เลือกซอฟต์แวร์ที่ติดตั้ง (Select Software);
+        |System (ระบบ)|
+        :Save PC Data;
+      endif
+    }
+
+  ' --- UC-12 Reports ---
+  case ( Reports / รายงาน )
+    partition "5. Reports (UC-12)" {
+      :เข้าหน้า Reports (Step 2);
+      :ดูรายงานสรุป Dashboard (Step 3);
+      
+      split
+        :กรองข้อมูล (Filter) (Step 5);
+      split again
+        :นำเข้า/ส่งออก Log (Import/Export) (Step 4);
+      split again
+        :ดาวน์โหลด (Export) (Step 6);
+      split again
+        :สั่งพิมพ์ (Print) (Step 7);
+      end split
+    }
+  
+  ' --- UC-13 System Config ---
+  case ( Settings / ตั้งค่า )
+    partition "6. System Config (UC-13)" {
+      :เข้าเมนูตั้งค่าระบบ (Enter Config);
+      
+      if (Tab?) then (General)
+        :แก้ไขค่าทั่วไป (Edit General);
+        :เปิด-ปิดห้องปฏิบัติการ;
+      else (Admin Accounts)
+        :ดูรายชื่อแอดมิน (View Admins);
+        :เพิ่มผู้ดูแลใหม่ (Add New Admin);
+      endif
+      
+      :บันทึกการตั้งค่า (Save Config);
+      |System (ระบบ)|
+      :อัปเดตการตั้งค่าลง DB;
+    }
+    
+  endswitch
+
+|Admin (ผู้ดูแลระบบ)|
+repeat while (ต้องการทำงานต่อ?) is (Yes)
+-> No (ต้องการออก);
+
+' --- UC-14 Logout ---
+partition "7. Logout (UC-14)" {
+  :คลิกปุ่มออกจากระบบ (Click Logout);
+  :ยืนยันการออก (Confirm);
+  |System (ระบบ)|
+  :ล้างข้อมูลเซสชัน (Clear Session);
+  :กลับสู่หน้าเข้าสู่ระบบ (Redirect to Login);
+}
+
+stop
+@enduml
