@@ -1,4 +1,4 @@
-/* admin-monitor.js (Final: Unlimited + Force Checkout Fix + Beautiful Timeline) */
+/* admin-monitor.js (Final: Date Picker Support + AI Timeline Display) */
 
 let checkInModal, manageActiveModal;
 let currentTab = 'internal';
@@ -14,7 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const manageEl = document.getElementById('manageActiveModal');
     if (manageEl) manageActiveModal = new bootstrap.Modal(manageEl);
 
-    // 2. Start Logic
+    // 2. Init Date Picker (Set to Today)
+    const dateInput = document.getElementById('monitorDate');
+    if (dateInput) {
+        dateInput.valueAsDate = new Date();
+        // เมื่อเปลี่ยนวันที่ ให้รีเฟรชหน้าจอทันที
+        dateInput.addEventListener('change', renderMonitor);
+    }
+
+    // 3. Start Logic
     if (typeof DB === 'undefined') {
         console.error("Error: DB is not loaded.");
         return;
@@ -24,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateClock();
     checkAndSwitchBookingQueue(); 
 
-    // 3. Real-time Sync
+    // 4. Real-time Sync
     window.addEventListener('storage', (e) => {
         if (e.key === 'ck_pcs' || e.key === 'ck_bookings') {
             checkAndSwitchBookingQueue();
@@ -32,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 4. Auto Refresh
+    // 5. Auto Refresh
     setInterval(() => {
         const isModalOpen = (modalEl && modalEl.classList.contains('show')) || (manageEl && manageEl.classList.contains('show'));
         if (!isModalOpen) renderMonitor();
@@ -96,7 +104,11 @@ function renderMonitor() {
     updateMonitorStats(allPcs);
 
     const bookings = DB.getBookings();
-    const todayStr = new Date().toISOString().split('T')[0]; 
+    
+    // ✅ ดึงวันที่จาก Date Picker (ถ้าไม่มีให้ใช้วันปัจจุบัน)
+    const dateInput = document.getElementById('monitorDate');
+    const selectedDateStr = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+    
     const now = new Date();
     const curTimeVal = now.getHours() * 60 + now.getMinutes();
 
@@ -131,7 +143,7 @@ function renderMonitor() {
             `<div class="mt-1 fw-bold text-dark text-truncate" title="${pc.currentUser}"><i class="bi bi-person-fill"></i> ${pc.currentUser}</div>` : 
             `<div class="mt-1 text-muted">-</div>`;
 
-        // -- Software Badges --
+        // -- Software Badges (บนการ์ด) --
         let softwareHtml = '';
         if (Array.isArray(pc.installedSoftware) && pc.installedSoftware.length > 0) {
             softwareHtml = '<div class="mt-2 d-flex flex-wrap justify-content-center gap-1">';
@@ -148,10 +160,10 @@ function renderMonitor() {
             softwareHtml = '<div class="mt-2" style="height: 22px;"></div>';
         }
 
-        // --- Booking Queue (ดีไซน์สวยกลับมาแล้ว!) ---
+        // --- Booking Queue / Timeline (อ้างอิงตามวันที่เลือก) ---
         let myBookings = bookings.filter(b => 
             String(b.pcId) === String(pc.id) && 
-            b.date === todayStr && 
+            b.date === selectedDateStr && // ✅ กรองตามวันที่เลือก
             ['approved', 'pending', 'completed', 'no_show'].includes(b.status)
         );
         myBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -160,9 +172,14 @@ function renderMonitor() {
         
         if (myBookings.length > 0) {
             queueHtml = `<div class="mt-3 pt-2 border-top text-start">`;
+            
+            // ปรับหัวข้อ Timeline ตามวันที่เลือก
+            const isTodayView = (selectedDateStr === new Date().toISOString().split('T')[0]);
+            const headerText = isTodayView ? 'TIMELINE (วันนี้)' : `TIMELINE (${formatDateShort(selectedDateStr)})`;
+
             queueHtml += `<div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-secondary-subtle">
                 <small class="fw-bold text-secondary" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                    <i class="bi bi-calendar-week me-1"></i>TIMELINE
+                    <i class="bi bi-calendar-week me-1"></i>${headerText}
                 </small>
             </div>`;
             
@@ -174,14 +191,22 @@ function renderMonitor() {
                 const startMins = sh * 60 + sm;
                 const endMins = eh * 60 + em;
                 
-                const isNow = (curTimeVal >= startMins && curTimeVal < endMins);
-                const isPast = (curTimeVal >= endMins) || b.status === 'completed';
+                const isNow = isTodayView && (curTimeVal >= startMins && curTimeVal < endMins);
+                const isPast = isTodayView && ((curTimeVal >= endMins) || b.status === 'completed');
                 const isNoShow = b.status === 'no_show';
                 
                 let rowClass = "rounded-2 px-2 py-1 d-flex justify-content-between align-items-center";
                 let textStyle = "font-size: 0.75rem; color: #495057;";
                 let statusBadge = "";
                 let rowStyle = ""; 
+
+                // ✅ เพิ่ม Icon สำหรับ AI / Software Booking
+                let typeIcon = "";
+                if (b.softwareList && b.softwareList.length > 0) {
+                    typeIcon = `<i class="bi bi-robot text-primary ms-1" style="font-size: 0.8em;" title="Software: ${b.softwareList.join(', ')}"></i>`;
+                } else if (b.type === 'AI') {
+                    typeIcon = `<i class="bi bi-cpu text-primary ms-1" style="font-size: 0.8em;" title="AI Workstation"></i>`;
+                }
 
                 if (isNoShow) {
                     textStyle = "font-size: 0.75rem; color: #6c757d;";
@@ -203,6 +228,7 @@ function renderMonitor() {
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-truncate" style="${textStyle} max-width: 80px;" title="${b.userName}">${b.userName}</span>
+                        ${typeIcon}
                         ${statusBadge}
                     </div>
                 </div>`;
@@ -251,7 +277,7 @@ function renderMonitor() {
 }
 
 // ==========================================
-// 🖱️ Interaction Handlers (คลิกการ์ดแล้วเกิดอะไรขึ้น)
+// 🖱️ Interaction Handlers
 // ==========================================
 
 function handlePcClick(pcId) {
@@ -261,7 +287,7 @@ function handlePcClick(pcId) {
     if (pc.status === 'available') {
         openCheckInModal(pc);
     } else if (pc.status === 'in_use') {
-        openManageActiveModal(pc); // ถ้าใช้แล้ว -> เปิดหน้าจัดการ (เพื่อกด Check-out)
+        openManageActiveModal(pc);
     } else if (pc.status === 'reserved') {
         if(confirm(`🟡 เครื่อง ${pc.name} จองโดย ${pc.currentUser}\n\nต้องการ "ยืนยันการเข้าใช้งาน" (Check-in) หรือไม่?`)) {
             const bookings = DB.getBookings();
@@ -291,7 +317,7 @@ function handlePcClick(pcId) {
 }
 
 // ==========================================
-// 🛠️ Admin Force Check-out (ฟังก์ชันที่ต้องมี!)
+// 🛠️ Admin Force Check-out
 // ==========================================
 
 function openManageActiveModal(pc) {
@@ -316,14 +342,12 @@ function performForceCheckout(pcId) {
     const pc = pcs.find(p => String(p.id) === String(pcId));
     const currentUser = pc ? pc.currentUser : 'Unknown';
 
-    // 1. ค้นหา Log การเริ่มใช้งานล่าสุด (START_SESSION) ของคนนี้
+    // 1. ค้นหา Log การเริ่มใช้งานล่าสุด
     const logs = DB.getLogs();
     let startLog = null;
     
-    // วนลูปย้อนกลับเพื่อหา Log ล่าสุดที่ตรงกับเครื่องและชื่อผู้ใช้
     for (let i = logs.length - 1; i >= 0; i--) {
         if (String(logs[i].pcId) === String(pcId) && logs[i].action === 'START_SESSION') {
-            // เช็คชื่อให้ตรงกัน (กันพลาดกรณีเครื่องค้าง)
             if (logs[i].userName === currentUser) {
                 startLog = logs[i];
                 break;
@@ -331,17 +355,15 @@ function performForceCheckout(pcId) {
         }
     }
 
-    // 2. ดึงข้อมูล User เดิมมาให้ครบ
+    // 2. ดึงข้อมูล User
     const userId = startLog ? startLog.userId : 'Unknown';
     const userName = startLog ? startLog.userName : currentUser;
     const userRole = startLog ? startLog.userRole : 'guest';
-    
-    // 🔥 ดึงค่าที่มักจะหายไป (คณะ, ชั้นปี, ระดับ)
     const userFaculty = startLog ? startLog.userFaculty : '-';
     const userLevel = startLog ? startLog.userLevel : '-'; 
     const userYear = startLog ? startLog.userYear : '-';   
 
-    // 3. ดึง Software ที่ติดตั้งในเครื่องมาบันทึก
+    // 3. ดึง Software
     const installedApps = pc && pc.installedSoftware ? pc.installedSoftware : [];
     const isAIUsed = installedApps.some(s => s.toLowerCase().includes('ai') || s.toLowerCase().includes('gpt'));
 
@@ -350,46 +372,37 @@ function performForceCheckout(pcId) {
     const endTime = new Date();
     const durationMinutes = Math.floor((endTime - startTime) / 60000);
 
-    // 5. บันทึก Log จบการทำงาน (ใส่ข้อมูลให้ครบทุกช่อง!)
+    // 5. บันทึก Log
     DB.saveLog({
         action: 'END_SESSION',   
-        
-        // ข้อมูลผู้ใช้ (User Identity) - ใส่ให้ครบ
         userId: userId,          
         userName: userName,   
         userRole: userRole,      
-        userFaculty: userFaculty, // ✅ คณะ
-        userLevel: userLevel,     // ✅ ระดับการศึกษา
-        userYear: userYear,       // ✅ ชั้นปี
-        
-        // ข้อมูลการใช้งาน
+        userFaculty: userFaculty, 
+        userLevel: userLevel,     
+        userYear: userYear,       
         pcId: pcId,
         startTime: startTime.toISOString(),
         timestamp: endTime.toISOString(),
         durationMinutes: durationMinutes > 0 ? durationMinutes : 0,
         usedSoftware: installedApps,
         isAIUsed: isAIUsed,
-        
-        // ข้อมูล Feedback
         details: 'Admin Forced Logout', 
-        satisfactionScore: 5,        // ✅ แก้ไข: ให้คะแนน 5 ดาวอัตโนมัติ
-        comment: 'Auto-rated by System (Admin Action)' // (Option) ใส่หมายเหตุว่าระบบให้คะแนนเอง
+        satisfactionScore: 5,        
+        comment: 'Auto-rated by System (Admin Action)' 
     });
 
-    // 6. อัปเดตสถานะเครื่องเป็นว่าง
     DB.updatePCStatus(pcId, 'available', null);
-    
-    // 7. รีเฟรชหน้าจอ
     renderMonitor();
 }
 
 // ==========================================
-// 📝 Auto Booking Switcher (คงเดิม)
+// 📝 Auto Booking Switcher (Real-time Clock Only)
 // ==========================================
 function checkAndSwitchBookingQueue() {
     const pcs = DB.getPCs();
     const bookings = DB.getBookings();
-    const todayStr = new Date().toLocaleDateString('en-CA');
+    const todayStr = new Date().toLocaleDateString('en-CA'); // Always check TODAY
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     let hasChanges = false;
@@ -432,7 +445,7 @@ function checkAndSwitchBookingQueue() {
 }
 
 // ==========================================
-// 📝 Check-in Logic (Unlimited + Full Data)
+// 📝 Check-in Logic
 // ==========================================
 
 function openCheckInModal(pc) {
@@ -469,10 +482,8 @@ function checkInAsAdmin(pcId) {
     const adminRole = "Staff/Admin"; 
     const adminId = "ADMIN-EXT";         
     
-    // Unlimited Check-in
     DB.updatePCStatus(pcId, 'in_use', adminName, { forceEndTime: null });
     
-    // Log
     DB.saveLog({ 
         action: 'START_SESSION', 
         userId: adminId, 
@@ -518,14 +529,13 @@ function verifyUBUUser() {
     
     const user = DB.checkRegAPI(userId); 
     if (user) {
-        // ✅ เก็บข้อมูล Level และ Year เพื่อใช้ตอน Check-in
         verifiedUserData = { 
             id: userId, 
             name: user.prefix + user.name, 
             faculty: user.faculty, 
             role: user.role,
-            level: user.level, // ✅ เพิ่ม
-            year: user.year    // ✅ เพิ่ม
+            level: user.level, 
+            year: user.year    
         };
         document.getElementById('internalVerifyCard').classList.remove('d-none');
         document.getElementById('showName').innerText = verifiedUserData.name;
@@ -541,7 +551,7 @@ function verifyUBUUser() {
 function confirmCheckIn() {
     const pcId = document.getElementById('checkInPcId').value;
     let finalName = "", userType = "", finalId = "", faculty = "";
-    let finalLevel = "-", finalYear = "-"; // ✅ ตัวแปรใหม่
+    let finalLevel = "-", finalYear = "-"; 
 
     if (currentTab === 'internal') {
         if (!verifiedUserData) return;
@@ -549,8 +559,8 @@ function confirmCheckIn() {
         userType = verifiedUserData.role; 
         finalId = verifiedUserData.id;
         faculty = verifiedUserData.faculty;
-        finalLevel = verifiedUserData.level; // ✅ รับค่า
-        finalYear = verifiedUserData.year;   // ✅ รับค่า
+        finalLevel = verifiedUserData.level; 
+        finalYear = verifiedUserData.year;   
     } else {
         const extName = document.getElementById('extName').value.trim();
         if (!extName) { alert('กรุณากรอกชื่อ'); return; }
@@ -562,18 +572,16 @@ function confirmCheckIn() {
         finalYear = '-';
     }
 
-    // Unlimited Check-in
     DB.updatePCStatus(pcId, 'in_use', finalName, { forceEndTime: null });
     
-    // ✅ บันทึก Log พร้อมข้อมูลครบถ้วน
     DB.saveLog({ 
         action: 'START_SESSION', 
         userId: finalId, 
         userName: finalName, 
         userRole: userType, 
         userFaculty: faculty, 
-        userLevel: finalLevel, // ✅ เพิ่ม
-        userYear: finalYear,   // ✅ เพิ่ม
+        userLevel: finalLevel, 
+        userYear: finalYear,   
         pcId: pcId, 
         startTime: new Date().toISOString(), 
         details: 'Walk-in User (Admin)', 
@@ -597,4 +605,9 @@ function updateFilterButtons(activeStatus) {
             if(status === 'reserved') { btn.style.backgroundColor = status === activeStatus ? '#ffc107' : 'transparent'; btn.style.border = '1px solid #ffc107'; if(status===activeStatus) btn.style.color='black'; }
         }
     });
+}
+
+function formatDateShort(dateStr) {
+    const d = new Date(dateStr);
+    return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
 }

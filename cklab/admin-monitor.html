@@ -110,16 +110,21 @@
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body py-2 px-3">
                     <div class="row align-items-center">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <div class="input-group search-pill">
                                 <span class="input-group-text bg-white border-end-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-                                <input type="text" class="form-control border-start-0 ps-0" id="searchPC" placeholder="ค้นหาชื่อเครื่อง หรือ ผู้ใช้งาน..." onkeyup="searchPC()">
+                                <input type="text" class="form-control border-start-0 ps-0" id="searchPC" placeholder="ค้นหาชื่อเครื่อง..." onkeyup="searchPC()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="input-group search-pill">
+                                <span class="input-group-text bg-white border-end-0 ps-3"><i class="bi bi-calendar-event text-primary"></i></span>
+                                <input type="date" class="form-control border-start-0 ps-0 text-primary fw-bold" id="monitorDate">
                             </div>
                         </div>
                         
-                        <div class="col-md-7 d-flex justify-content-md-end mt-2 mt-md-0 filter-btn-group">
-                            <span class="align-self-center text-muted small me-2 d-none d-lg-block">แสดงสถานะ:</span>
-                            
+                        <div class="col-md-5 d-flex justify-content-md-end mt-2 mt-md-0 filter-btn-group">
                             <button class="btn btn-sm rounded-pill px-3 me-1 active" 
                                     onclick="filterPC('all')" id="btn-all" style="background-color: #e9ecef; color: #495057; border: none;">
                                 ทั้งหมด
@@ -216,27 +221,27 @@
         </div>
     </div>
 
-<div class="modal fade" id="manageActiveModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title fw-bold"><i class="bi bi-gear-fill me-2"></i>จัดการเครื่อง (In Use)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4 text-center">
-                <h3 class="fw-bold text-primary mb-1" id="managePcName">-</h3>
-                <p class="text-muted mb-4">ผู้ใช้งาน: <span id="manageUserName" class="fw-bold text-dark">-</span></p>
-
-                <div class="d-grid gap-2">
-                    <button onclick="confirmForceLogout()" class="btn btn-danger btn-lg fw-bold shadow-sm">
-                        <i class="bi bi-box-arrow-right me-2"></i>สั่งเช็คเอ้าท์ (Check-out)
-                    </button>
+    <div class="modal fade" id="manageActiveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-gear-fill me-2"></i>จัดการเครื่อง (In Use)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <input type="hidden" id="managePcId">
+                <div class="modal-body p-4 text-center">
+                    <h3 class="fw-bold text-primary mb-1" id="managePcName">-</h3>
+                    <p class="text-muted mb-4">ผู้ใช้งาน: <span id="manageUserName" class="fw-bold text-dark">-</span></p>
+
+                    <div class="d-grid gap-2">
+                        <button onclick="confirmForceLogout()" class="btn btn-danger btn-lg fw-bold shadow-sm">
+                            <i class="bi bi-box-arrow-right me-2"></i>สั่งเช็คเอ้าท์ (Check-out)
+                        </button>
+                    </div>
+                    <input type="hidden" id="managePcId">
+                </div>
             </div>
         </div>
     </div>
-</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="mock-db.js"></script>
