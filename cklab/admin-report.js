@@ -591,17 +591,77 @@ function drawTopSoftwareChart(data) {
     const existingChart = Chart.getChart(ctx);
     if (existingChart) existingChart.destroy();
 
+    // 1. จัดเรียงข้อมูล และคำนวณยอดรวมทั้งหมด (Grand Total)
     const sorted = Object.entries(data).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    const grandTotal = Object.values(data).reduce((acc, val) => acc + val, 0);
+
     const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 400, 0);
     gradient.addColorStop(0, '#4e73df'); gradient.addColorStop(1, '#36b9cc');
 
     return new Chart(ctx, {
         type: 'bar',
-        data: { labels: sorted.map(x=>x[0]), datasets: [{ label: 'จำนวนการใช้งาน', data: sorted.map(x=>x[1]), backgroundColor: gradient, borderRadius: 10, barPercentage: 0.6 }] },
+        data: { 
+            labels: sorted.map(x=>x[0]), 
+            datasets: [{ 
+                label: 'จำนวนการใช้งาน', 
+                data: sorted.map(x=>x[1]), 
+                backgroundColor: gradient, 
+                borderRadius: 10, 
+                barPercentage: 0.6 
+            }] 
+        },
+        // ✅ 2. เพิ่ม Plugin พิเศษสำหรับวาดตัวเลข % ต่อท้ายแท่งกราฟ
+        plugins: [{
+            id: 'customBarLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.font = "bold 12px 'Prompt', sans-serif"; // กำหนดฟอนต์
+                ctx.fillStyle = '#666'; // สีตัวอักษร
+                ctx.textBaseline = 'middle';
+                
+                chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+                    const value = sorted[index][1];
+                    // คำนวณ %
+                    const percentage = grandTotal > 0 ? ((value / grandTotal) * 100).toFixed(1) + '%' : '0%';
+                    
+                    // วาดตัวหนังสือต่อท้ายแท่ง (x + 5px เพื่อเว้นระยะห่างนิดหน่อย)
+                    ctx.fillText(percentage, datapoint.x + 5, datapoint.y);
+                });
+                ctx.restore();
+            }
+        }],
         options: { 
-            indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: {display:false}, tooltip: { callbacks: { label: (c) => ` ${c.raw} ครั้ง` } } }, 
-            scales: { x: { beginAtZero: true, grid: { display: false }, ticks: { font: { family: "'Prompt', sans-serif" } } }, y: { grid: {display:false}, ticks: { font: { family: "'Prompt', sans-serif", weight: '500' } } } } 
+            indexAxis: 'y', // กราฟแนวนอน
+            responsive: true, 
+            maintainAspectRatio: false, 
+            layout: {
+                // ✅ 3. เพิ่ม Padding ด้านขวา เพื่อกันไม่ให้ตัวเลข % ตกขอบจอ
+                padding: { right: 45 } 
+            },
+            plugins: { 
+                legend: {display:false}, 
+                tooltip: { 
+                    callbacks: { 
+                        label: (c) => {
+                            const val = c.raw;
+                            const per = grandTotal > 0 ? ((val/grandTotal)*100).toFixed(1) : 0;
+                            return ` ${val} ครั้ง (${per}%)`;
+                        } 
+                    } 
+                } 
+            }, 
+            scales: { 
+                x: { 
+                    beginAtZero: true, 
+                    grid: { display: false }, 
+                    ticks: { font: { family: "'Prompt', sans-serif" } } 
+                }, 
+                y: { 
+                    grid: {display:false}, 
+                    ticks: { font: { family: "'Prompt', sans-serif", weight: '500' } } 
+                } 
+            } 
         }
     });
 }
@@ -629,10 +689,88 @@ function drawPCAvgTimeChart(d) {
 }
 
 function drawAIUsagePieChart(d) { 
+    const total = d.ai + d.nonAI;
+    const toStrikethrough = (text) => text.split('').map(char => char + '\u0336').join('');
+
     return new Chart(document.getElementById('aiUsagePieChart'), { 
         type: 'doughnut', 
-        data: { labels: ['AI Tools', 'General Use'], datasets: [{ data: [d.ai, d.nonAI], backgroundColor: ['#4e73df', '#e2e6ea'], borderWidth: 0 }] }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position:'bottom', labels: { usePointStyle: true, font: { family: "'Prompt', sans-serif" } } } }, cutout: '70%' } 
+        data: { 
+            labels: ['AI Tools', 'General Use'], 
+            datasets: [{ 
+                data: [d.ai, d.nonAI], 
+                backgroundColor: ['#4e73df', '#e2e6ea'], 
+                borderWidth: 0,
+                hoverOffset: 4
+            }] 
+        }, 
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            layout: {
+                padding: { top: 10, bottom: 10, left: 10, right: 20 }
+            },
+            plugins: { 
+                legend: { 
+                    position: 'right', 
+                    align: 'start',    
+                    labels: { 
+                        usePointStyle: true, 
+                        font: { family: "'Prompt', sans-serif", size: 12 },
+                        padding: 20,
+                        boxWidth: 10,
+                        
+                        generateLabels: (chart) => {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    const color = data.datasets[0].backgroundColor[i];
+                                    
+                                    const isHidden = !chart.getDataVisibility(i);
+                                    
+                                    let textLabel = `${label} (${percentage}%)`;
+                                    
+                                    // ถ้าซ่อน ให้ขีดฆ่าข้อความ
+                                    if (isHidden) {
+                                        textLabel = toStrikethrough(textLabel);
+                                    }
+
+                                    return {
+                                        text: textLabel,
+                                        // ✅ แก้ไขตรงนี้: ให้ใช้สีเดิม (color) เสมอ ไม่ว่าจะซ่อนหรือไม่
+                                        fillStyle: color, 
+                                        strokeStyle: color,
+                                        lineWidth: 0,
+                                        hidden: isHidden,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    },
+                    onClick: (e, legendItem, legend) => {
+                        const index = legendItem.index;
+                        const ci = legend.chart;
+                        if (ci.isDatasetVisible(0)) {
+                            ci.toggleDataVisibility(index);
+                            ci.update();
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const value = context.raw;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return ` ${context.label}: ${value.toLocaleString()} ครั้ง (${percentage}%)`;
+                        }
+                    }
+                }
+            }, 
+            cutout: '65%'
+        } 
     }); 
 }
 
@@ -644,6 +782,9 @@ function drawSatisfactionChart(data) {
         avgScore = (weightedSum / total); 
     }
     const avgDisplay = avgScore.toFixed(1);
+
+    // คำนวณค่าร้อยละ
+    const percentage = total > 0 ? ((avgScore / 5) * 100).toFixed(1) : 0;
     
     const scoreEl = document.getElementById('satisfactionAvgScore');
     const countEl = document.getElementById('satisfactionTotalCount');
@@ -651,12 +792,17 @@ function drawSatisfactionChart(data) {
     
     if(scoreEl) {
         let scoreClass = 'text-dark';
-        if (avgScore >= 4.5) scoreClass = 'text-success';
-        else if (avgScore >= 3.5) scoreClass = 'text-primary';
+        
+        // ✅ จุดที่ 1: สลับ Class สีของตัวเลขคะแนน
+        if (avgScore >= 4.5) scoreClass = 'text-primary';      // คะแนนสูง (4.5+) ให้เป็นสีฟ้า
+        else if (avgScore >= 3.5) scoreClass = 'text-success'; // คะแนนรอง (3.5+) ให้เป็นสีเขียว
         else if (avgScore >= 2.5) scoreClass = 'text-warning';
         else if (avgScore > 0) scoreClass = 'text-danger';
 
         scoreEl.className = `fw-bold mb-0 me-3 ${scoreClass}`;
+        scoreEl.style.fontSize = '6rem'; 
+        scoreEl.style.lineHeight = '0.8';
+        
         scoreEl.innerText = avgDisplay;
 
         if(starsEl) {
@@ -669,12 +815,27 @@ function drawSatisfactionChart(data) {
             starsEl.innerHTML = starsHtml;
         }
     }
-    if(countEl) countEl.innerText = `จากผู้ใช้งานทั้งหมด ${total.toLocaleString()} คน`;
+    
+    // ส่วนแสดงจำนวนคนและร้อยละ (จัดระยะห่างตามที่ขอ)
+    if(countEl) {
+        countEl.innerHTML = `
+            <div class="text-dark fw-bold" style="line-height: 1.2; margin-bottom: 0px;">คิดเป็นร้อยละ ${percentage}%</div>
+            <div class="text-dark" style="display: block; line-height: 1.2; margin-top: 2px;">จากผู้ใช้งานทั้งหมด ${total.toLocaleString()} คน</small>
+        `;
+    }
 
     const container = document.getElementById('satisfactionProgressBars');
     if(!container) return;
     container.innerHTML = '';
-    const barConfigs = { 5: { color: '#2ecc71' }, 4: { color: '#3498db' }, 3: { color: '#f1c40f' }, 2: { color: '#e67e22' }, 1: { color: '#e74c3c' } };
+    
+    // ✅ จุดที่ 2: สลับรหัสสีของหลอดกราฟ (5 ดาว = สีฟ้า, 4 ดาว = สีเขียว)
+    const barConfigs = { 
+        5: { color: '#3498db' }, // สีฟ้า (เดิมเขียว)
+        4: { color: '#2ecc71' }, // สีเขียว (เดิมฟ้า)
+        3: { color: '#f1c40f' }, 
+        2: { color: '#e67e22' }, 
+        1: { color: '#e74c3c' } 
+    };
 
     for(let i=5; i>=1; i--) {
         const count = data[i] || 0;
